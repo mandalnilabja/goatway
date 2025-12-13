@@ -1,33 +1,62 @@
 # Variables
 BINARY_NAME=goatway
 MAIN_FILE=./cmd/api/main.go
+TOOLS_DIR=./bin/tools
 
-# Default command (runs when you type just 'make')
+GOIMPORTS=$(TOOLS_DIR)/goimports
+GOLANGCI_LINT=$(TOOLS_DIR)/golangci-lint
+
+# Default command
 all: test build
 
-# 1. Build the binary
+# -------- TOOLS --------
+
+tools: $(GOIMPORTS) $(GOLANGCI_LINT)
+
+$(GOIMPORTS):
+	@echo "Installing goimports..."
+	mkdir -p $(TOOLS_DIR)
+	GOBIN=$(abspath $(TOOLS_DIR)) go install golang.org/x/tools/cmd/goimports@v0.37.0
+
+$(GOLANGCI_LINT):
+	@echo "Installing golangci-lint..."
+	mkdir -p $(TOOLS_DIR)
+	GOBIN=$(abspath $(TOOLS_DIR)) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
+
+# -------- BUILD --------
+
 build:
 	@echo "Building Goatway..."
-	# Creates a 'bin' folder and puts the executable there
 	mkdir -p bin
 	go build -o bin/$(BINARY_NAME) $(MAIN_FILE)
 
-# 2. Run the application
 run:
 	@echo "Running Goatway..."
 	go run $(MAIN_FILE)
 
-# 3. Test the application
 test:
 	@echo "Running tests..."
-	# ./... tells Go to test the current directory and all subdirectories
 	go test -v ./...
 
-# 4. Clean up binaries
+# -------- QUALITY --------
+
+fmt: tools
+	@echo "Formatting code..."
+	$(GOIMPORTS) -w .
+
+fmt-check: tools
+	@echo "Checking formatting..."
+	test -z "$$($(GOIMPORTS) -l .)"
+
+lint: tools
+	@echo "Running linters..."
+	$(GOLANGCI_LINT) run
+
+# -------- CLEAN --------
+
 clean:
 	@echo "Cleaning up..."
 	go clean
 	rm -rf bin
 
-# Marks these commands as not associated with actual files
-.PHONY: all build run test clean
+.PHONY: all build run test fmt fmt-check lint clean tools
