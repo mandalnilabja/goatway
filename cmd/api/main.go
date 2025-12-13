@@ -10,41 +10,42 @@ import (
 )
 
 func main() {
-	// 1. Initialize Ristretto Cache
+	// 1. Initialize Cache (Keeping your existing logic)
 	cache, err := ristretto.NewCache(&ristretto.Config[string, any]{
-		NumCounters: 1e7,     // 10M keys to track frequency
-		MaxCost:     1 << 30, // 1GB max cost
-		BufferItems: 64,      // Number of keys per Get buffer
+		NumCounters: 1e7,
+		MaxCost:     1 << 30,
+		BufferItems: 64,
 	})
 	if err != nil {
 		panic(err)
 	}
-	// Ideally close cache on exit, though main exit kills it anyway.
-	// In a real graceful shutdown, you'd handle this.
-	// defer cache.Close()
 
-	// 2. Initialize Handlers with the Cache
-	// We inject the cache into our handler repository
+	// 2. Initialize Repo
 	h := handlers.NewRepo(cache)
 
-	// 3. Initialize Router
+	// 3. Router
 	mux := http.NewServeMux()
 
-	// 4. Register Routes
-	// Note: We now use 'h.Home' instead of 'handlers.Home'
+	// Existing routes
 	mux.HandleFunc("GET /", h.Home)
 	mux.HandleFunc("GET /api/health", h.HealthCheck)
-	mux.HandleFunc("GET /api/data", h.GetCachedData) // New route
+	mux.HandleFunc("GET /api/data", h.GetCachedData)
 
-	// 5. Server Configuration
+	// --- NEW PROXY ROUTE ---
+	// We map POST /v1/chat/completions to our proxy handler
+	mux.HandleFunc("POST /v1/chat/completions", h.OpenAIProxy)
+
+	// 4. Server Config
 	srv := &http.Server{
-		Addr:         ":8080",
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:    ":8080",
+		Handler: mux,
+		// IMPORTANT: ReadTimeout can kill long streams!
+		// If you expect long AI generations, you might need to bump this or remove it.
+		// For now, let's bump it to 5 minutes for safety with LLMs.
+		ReadTimeout:  300 * time.Second,
+		WriteTimeout: 300 * time.Second,
 	}
 
-	// 6. Start Server
 	log.Println("Goatway server starting on http://localhost:8080")
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
