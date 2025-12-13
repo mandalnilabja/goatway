@@ -1,41 +1,10 @@
-package handlers
+package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/dgraph-io/ristretto/v2"
 )
-
-// Repo holds the dependencies for your handlers (like Cache, DB, etc.)
-// We use [string, any] so we can cache any type of data, not just strings.
-type Repo struct {
-	Cache *ristretto.Cache[string, any]
-}
-
-// NewRepo creates a new instance of your handler repository
-func NewRepo(cache *ristretto.Cache[string, any]) *Repo {
-	return &Repo{
-		Cache: cache,
-	}
-}
-
-// Home is now a method of *Repo
-func (h *Repo) Home(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Welcome to Goatway API!"))
-}
-
-// HealthCheck is now a method of *Repo
-func (h *Repo) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	response := map[string]string{
-		"status": "active",
-		"app":    "goatway",
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
 
 // GetCachedData demonstrates the caching logic
 func (h *Repo) GetCachedData(w http.ResponseWriter, r *http.Request) {
