@@ -2,8 +2,13 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
+	"time"
+
+	"github.com/mandalnilabja/goatway/internal/types"
 )
 
 // OpenRouterProvider implements the Provider interface for OpenRouter
@@ -30,93 +35,190 @@ func (p *OpenRouterProvider) BaseURL() string {
 
 // PrepareRequest adds OpenRouter-specific headers to the request
 func (p *OpenRouterProvider) PrepareRequest(ctx context.Context, req *http.Request) error {
-	// OpenRouter requires these headers for rankings/visibility
 	req.Header.Set("HTTP-Referer", "https://github.com/mandalnilabja/goatway")
 	req.Header.Set("X-Title", "Goatway Proxy")
 	return nil
 }
 
-// ProxyRequest handles the streaming proxy to OpenRouter
-// CRITICAL: Maintains streaming semantics with no buffering
-func (p *OpenRouterProvider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *http.Request) error {
-	// Create the upstream request to OpenRouter
-	upstreamReq, err := http.NewRequestWithContext(ctx, req.Method, p.BaseURL(), req.Body)
-	if err != nil {
-		http.Error(w, "Failed to create request", http.StatusInternalServerError)
-		return err
+// ProxyRequest handles the proxy to OpenRouter with result tracking.
+// CRITICAL: Maintains streaming semantics with no buffering.
+func (p *OpenRouterProvider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *http.Request, opts *ProxyOptions) (*ProxyResult, error) {
+	startTime := time.Now()
+	result := &ProxyResult{
+		Model:        opts.Model,
+		PromptTokens: opts.PromptTokens,
+		IsStreaming:  opts.IsStreaming,
 	}
 
-	// Header Passthrough (Surgical)
-	// Copy all headers except hop-by-hop headers
+	// Determine API key: from options or provider default
+	apiKey := opts.APIKey
+	if apiKey == "" {
+		apiKey = p.APIKey
+	}
+
+	// Determine request body source
+	var body io.Reader = req.Body
+	if opts.Body != nil {
+		body = opts.Body
+	}
+
+	// Create upstream request
+	upstreamReq, err := http.NewRequestWithContext(ctx, req.Method, p.BaseURL(), body)
+	if err != nil {
+		result.Error = err
+		result.StatusCode = http.StatusInternalServerError
+		http.Error(w, "Failed to create request", http.StatusInternalServerError)
+		return result, err
+	}
+
+	// Copy headers (skip hop-by-hop)
 	for k, v := range req.Header {
-		// Skip hop-by-hop headers which shouldn't be forwarded
-		if k == "Content-Length" || k == "Connection" || k == "Host" {
+		if k == "Content-Length" || k == "Connection" || k == "Host" || k == "Authorization" {
 			continue
 		}
 		upstreamReq.Header[k] = v
 	}
 
+	// Set authorization with the resolved API key
+	upstreamReq.Header.Set("Authorization", "Bearer "+apiKey)
+
 	// Add provider-specific headers
 	if err := p.PrepareRequest(ctx, upstreamReq); err != nil {
+		result.Error = err
+		result.StatusCode = http.StatusInternalServerError
 		http.Error(w, "Failed to prepare request", http.StatusInternalServerError)
-		return err
+		return result, err
 	}
 
-	// Setup the Client
-	// CRITICAL: DisableCompression is required for correct streaming.
-	// If compression is enabled, Go asks for gzip. If we just copy gzip bytes to the client,
-	// the client (expecting text/event-stream) will fail to parse the chunks.
+	// Setup client (DisableCompression required for streaming)
 	client := &http.Client{
 		Transport: &http.Transport{
 			DisableCompression: true,
 		},
 	}
 
-	// Execute Request
+	// Execute request
 	resp, err := client.Do(upstreamReq)
 	if err != nil {
+		result.Error = err
+		result.StatusCode = http.StatusBadGateway
 		http.Error(w, "Bad Gateway: "+err.Error(), http.StatusBadGateway)
-		return err
+		return result, err
 	}
 	defer resp.Body.Close()
 
-	// Copy Response Headers
+	result.StatusCode = resp.StatusCode
+	result.Duration = time.Since(startTime)
+
+	// Handle error responses
+	if resp.StatusCode >= 400 {
+		return p.handleErrorResponse(w, resp, result)
+	}
+
+	// Route based on content type
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "text/event-stream") {
+		return p.handleStreamingResponse(w, resp, result)
+	}
+	return p.handleJSONResponse(w, resp, result)
+}
+
+// handleStreamingResponse processes SSE streaming responses.
+func (p *OpenRouterProvider) handleStreamingResponse(w http.ResponseWriter, resp *http.Response, result *ProxyResult) (*ProxyResult, error) {
+	// Copy headers
 	for k, v := range resp.Header {
 		w.Header()[k] = v
 	}
 	w.WriteHeader(resp.StatusCode)
 
-	// Stream Data (The "Pump")
-	// We assert the writer is a Flusher to support streaming
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		// This should practically never happen in standard Go HTTP servers
 		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		result.Error = io.ErrNoProgress
+		return result, nil
+	}
+
+	// Process stream while forwarding to client
+	processor := NewStreamProcessor()
+	err := processor.ProcessReader(resp.Body, func(chunk []byte) error {
+		if _, wErr := w.Write(chunk); wErr != nil {
+			return wErr
+		}
+		flusher.Flush()
 		return nil
+	})
+
+	// Extract results from processor
+	result.FinishReason = processor.GetFinishReason()
+	if processor.GetModel() != "" {
+		result.Model = processor.GetModel()
 	}
 
-	// Create a buffer (32KB is a standard clear balance between CPU and Syscalls)
-	buf := make([]byte, 32*1024)
-	for {
-		n, err := resp.Body.Read(buf)
-		if n > 0 {
-			// Write the chunk we just read
-			if _, wErr := w.Write(buf[:n]); wErr != nil {
-				// Client disconnected or network error
-				return wErr
-			}
-			// FLUSH IMMEDIATELY. This is the "async" magic.
-			// Without this, Go might buffer 4KB before sending, causing "laggy" streams.
-			flusher.Flush()
+	// Use upstream usage if available
+	if usage := processor.GetUsage(); usage != nil {
+		result.PromptTokens = usage.PromptTokens
+		result.CompletionTokens = usage.CompletionTokens
+		result.TotalTokens = usage.TotalTokens
+	}
+
+	if err != nil {
+		result.Error = err
+	}
+	return result, err
+}
+
+// handleJSONResponse processes non-streaming JSON responses.
+func (p *OpenRouterProvider) handleJSONResponse(w http.ResponseWriter, resp *http.Response, result *ProxyResult) (*ProxyResult, error) {
+	// Read full response for parsing
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		result.Error = err
+		http.Error(w, "Failed to read response", http.StatusBadGateway)
+		return result, err
+	}
+
+	// Parse response to extract usage
+	var completion types.ChatCompletionResponse
+	if err := json.Unmarshal(body, &completion); err == nil {
+		if completion.Usage != nil {
+			result.PromptTokens = completion.Usage.PromptTokens
+			result.CompletionTokens = completion.Usage.CompletionTokens
+			result.TotalTokens = completion.Usage.TotalTokens
 		}
-		if err == io.EOF {
-			break
+		if len(completion.Choices) > 0 {
+			result.FinishReason = completion.Choices[0].FinishReason
 		}
-		if err != nil {
-			// Log error if needed, but the stream is already dirty
-			return err
+		if completion.Model != "" {
+			result.Model = completion.Model
 		}
 	}
 
-	return nil
+	// Forward response to client
+	for k, v := range resp.Header {
+		w.Header()[k] = v
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, _ = w.Write(body)
+
+	return result, nil
+}
+
+// handleErrorResponse forwards error responses and extracts error info.
+func (p *OpenRouterProvider) handleErrorResponse(w http.ResponseWriter, resp *http.Response, result *ProxyResult) (*ProxyResult, error) {
+	body, _ := io.ReadAll(resp.Body)
+
+	// Try to extract error message
+	var apiErr types.APIError
+	if err := json.Unmarshal(body, &apiErr); err == nil {
+		result.ErrorMessage = apiErr.Error.Message
+	}
+
+	// Forward error to client
+	for k, v := range resp.Header {
+		w.Header()[k] = v
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, _ = w.Write(body)
+
+	return result, nil
 }
