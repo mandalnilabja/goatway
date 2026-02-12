@@ -59,7 +59,8 @@ const Pages = {
         app.innerHTML = '<div>Loading...</div>';
 
         try {
-            const creds = await API.listCredentials();
+            const data = await API.listCredentials();
+            const creds = data.credentials || [];
 
             app.innerHTML = `
                 <div>
@@ -94,6 +95,61 @@ const Pages = {
                 </div>
                 <div>
                     Provider: ${cred.provider} | Key: ${cred.api_key_preview || '***'} | Created: ${Utils.formatDate(cred.created_at)}
+                </div>
+            </div>
+        `;
+    },
+
+    // API Keys page
+    async apikeys() {
+        const app = document.getElementById('app');
+        app.innerHTML = '<div>Loading...</div>';
+
+        try {
+            const data = await API.listAPIKeys();
+            const keys = data.data || [];
+
+            app.innerHTML = `
+                <div>
+                    <h2>API Keys</h2>
+                    <button onclick="Modals.showAPIKeyForm()">+ Create Key</button>
+                </div>
+
+                <p>API keys allow applications to access the proxy endpoints. Use these keys with the OpenAI SDK.</p>
+
+                <div id="apikeys-list">
+                    ${keys.length ? keys.map(k => this.renderAPIKeyCard(k)).join('') :
+                      '<div><p>No API keys created yet.</p></div>'}
+                </div>
+            `;
+        } catch (err) {
+            const msg = err?.message || String(err);
+            app.innerHTML = `<div>Error loading API keys: ${msg}</div>`;
+        }
+    },
+
+    renderAPIKeyCard(key) {
+        const statusLabel = key.is_active ? '[Active]' : '[Inactive]';
+        const scopes = (key.scopes || []).join(', ');
+        const rateLimit = key.rate_limit ? `${key.rate_limit}/min` : 'Unlimited';
+        const expiresAt = key.expires_at ? Utils.formatDate(key.expires_at) : 'Never';
+
+        return `
+            <div data-id="${key.id}">
+                <div>
+                    <div>
+                        <span>${statusLabel}</span>
+                        ${key.name}
+                    </div>
+                    <div>
+                        <button onclick="Actions.toggleAPIKey('${key.id}', ${key.is_active})">${key.is_active ? 'Disable' : 'Enable'}</button>
+                        <button onclick="Actions.rotateAPIKey('${key.id}')">Rotate</button>
+                        <button onclick="Modals.showAPIKeyForm('${key.id}')">Edit</button>
+                        <button onclick="Actions.deleteAPIKey('${key.id}')">Delete</button>
+                    </div>
+                </div>
+                <div>
+                    Key: ${key.key_prefix}... | Scopes: ${scopes} | Rate: ${rateLimit} | Expires: ${expiresAt} | Created: ${Utils.formatDate(key.created_at)}
                 </div>
             </div>
         `;

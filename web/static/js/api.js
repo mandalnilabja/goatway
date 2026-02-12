@@ -54,6 +54,37 @@ const API = {
         return this.request(`/credentials/${id}/default`, { method: 'POST' });
     },
 
+    // API Keys
+    async listAPIKeys() {
+        return this.request('/apikeys');
+    },
+
+    async getAPIKey(id) {
+        return this.request(`/apikeys/${id}`);
+    },
+
+    async createAPIKey(data) {
+        return this.request('/apikeys', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async updateAPIKey(id, data) {
+        return this.request(`/apikeys/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async deleteAPIKey(id) {
+        return this.request(`/apikeys/${id}`, { method: 'DELETE' });
+    },
+
+    async rotateAPIKey(id) {
+        return this.request(`/apikeys/${id}/rotate`, { method: 'POST' });
+    },
+
     // Usage
     async getUsageStats(params = {}) {
         const query = new URLSearchParams(params).toString();

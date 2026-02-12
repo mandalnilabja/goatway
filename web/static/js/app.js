@@ -7,6 +7,7 @@ const Router = {
     routes: {
         '/web': () => Pages.dashboard(),
         '/web/credentials': () => Pages.credentials(),
+        '/web/apikeys': () => Pages.apikeys(),
         '/web/usage': () => Pages.usage(),
         '/web/logs': () => Pages.logs(),
         '/web/settings': () => Pages.settings()
@@ -206,6 +207,123 @@ const Modals = {
                 alert('Error: ' + (err?.message || String(err)));
             }
         };
+    },
+
+    async showAPIKeyForm(editId = null) {
+        let apiKey = { name: '', scopes: ['proxy'], rate_limit: 0 };
+
+        if (editId) {
+            try {
+                apiKey = await API.getAPIKey(editId);
+            } catch (err) {
+                alert('Error loading API key: ' + (err?.message || String(err)));
+                return;
+            }
+        }
+
+        const hasProxyScope = apiKey.scopes?.includes('proxy') ?? true;
+        const hasAdminScope = apiKey.scopes?.includes('admin') ?? false;
+
+        this.show(`
+            <div>
+                <div>
+                    <h3>${editId ? 'Edit' : 'Create'} API Key</h3>
+                    <button onclick="Modals.close()">&times;</button>
+                </div>
+                <form id="apikey-form">
+                    <div>
+                        <label>Name</label>
+                        <input type="text" name="name" value="${apiKey.name}" required placeholder="My Application">
+                    </div>
+                    <div>
+                        <label>Scopes</label>
+                        <div>
+                            <label><input type="checkbox" name="scope_proxy" ${hasProxyScope ? 'checked' : ''}> Proxy (access LLM endpoints)</label>
+                            <label><input type="checkbox" name="scope_admin" ${hasAdminScope ? 'checked' : ''}> Admin (manage settings)</label>
+                        </div>
+                    </div>
+                    <div>
+                        <label>Rate Limit (requests/min, 0 = unlimited)</label>
+                        <input type="number" name="rate_limit" value="${apiKey.rate_limit || 0}" min="0">
+                    </div>
+                    ${!editId ? `
+                    <div>
+                        <label>Expires In (seconds, empty = never)</label>
+                        <input type="number" name="expires_in" min="0" placeholder="e.g., 86400 for 1 day">
+                    </div>
+                    ` : ''}
+                    ${editId ? `
+                    <div>
+                        <label><input type="checkbox" name="is_active" ${apiKey.is_active ? 'checked' : ''}> Active</label>
+                    </div>
+                    ` : ''}
+                    <div>
+                        <button type="button" onclick="Modals.close()">Cancel</button>
+                        <button type="submit">${editId ? 'Update' : 'Create'}</button>
+                    </div>
+                </form>
+            </div>
+        `);
+
+        document.getElementById('apikey-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const form = e.target;
+
+            const scopes = [];
+            if (form.scope_proxy.checked) scopes.push('proxy');
+            if (form.scope_admin.checked) scopes.push('admin');
+
+            if (scopes.length === 0) {
+                alert('Please select at least one scope');
+                return;
+            }
+
+            const data = {
+                name: form.name.value,
+                scopes: scopes,
+                rate_limit: parseInt(form.rate_limit.value) || 0
+            };
+
+            if (!editId && form.expires_in?.value) {
+                data.expires_in = parseInt(form.expires_in.value);
+            }
+
+            if (editId && form.is_active) {
+                data.is_active = form.is_active.checked;
+            }
+
+            try {
+                if (editId) {
+                    await API.updateAPIKey(editId, data);
+                    this.close();
+                } else {
+                    const result = await API.createAPIKey(data);
+                    this.close();
+                    this.showAPIKeyCreated(result.key);
+                }
+                Pages.apikeys();
+            } catch (err) {
+                alert('Error: ' + (err?.message || String(err)));
+            }
+        };
+    },
+
+    showAPIKeyCreated(key) {
+        this.show(`
+            <div>
+                <div>
+                    <h3>API Key Created</h3>
+                </div>
+                <p><strong>Important:</strong> Copy your API key now. You won't be able to see it again!</p>
+                <div>
+                    <input type="text" id="new-key-input" value="${key}" readonly style="width: 100%; font-family: monospace;">
+                </div>
+                <div>
+                    <button type="button" onclick="navigator.clipboard.writeText('${key}'); alert('Copied!')">Copy to Clipboard</button>
+                    <button type="button" onclick="Modals.close()">Done</button>
+                </div>
+            </div>
+        `);
     }
 };
 
@@ -238,6 +356,38 @@ const Actions = {
         try {
             await API.deleteRequestLogs(date.toISOString().split('T')[0]);
             alert('Old logs cleared successfully');
+        } catch (err) {
+            alert('Error: ' + (err?.message || String(err)));
+        }
+    },
+
+    async deleteAPIKey(id) {
+        if (!confirm('Delete this API key? This cannot be undone.')) return;
+        try {
+            await API.deleteAPIKey(id);
+            Pages.apikeys();
+        } catch (err) {
+            alert('Error: ' + (err?.message || String(err)));
+        }
+    },
+
+    async rotateAPIKey(id) {
+        if (!confirm('Rotate this API key? The old key will stop working immediately.')) return;
+        try {
+            const result = await API.rotateAPIKey(id);
+            Modals.showAPIKeyCreated(result.key);
+            Pages.apikeys();
+        } catch (err) {
+            alert('Error: ' + (err?.message || String(err)));
+        }
+    },
+
+    async toggleAPIKey(id, currentlyActive) {
+        const action = currentlyActive ? 'disable' : 'enable';
+        if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this API key?`)) return;
+        try {
+            await API.updateAPIKey(id, { is_active: !currentlyActive });
+            Pages.apikeys();
         } catch (err) {
             alert('Error: ' + (err?.message || String(err)));
         }

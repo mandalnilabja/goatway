@@ -10,11 +10,21 @@ import (
 )
 
 // AdminAuth middleware protects admin routes using stored password hash.
-// Requires Bearer token authentication with the admin password.
-func AdminAuth(store storage.Storage) func(http.Handler) http.Handler {
+// Accepts either a valid session cookie (for web UI) or Bearer token (for API clients).
+func AdminAuth(store storage.Storage, sessions *SessionStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Extract Bearer token
+			// First, check for valid session cookie (web UI auth)
+			if sessions != nil {
+				if cookie, err := r.Cookie("goatway_session"); err == nil && cookie.Value != "" {
+					if session := sessions.Get(cookie.Value); session != nil {
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+			}
+
+			// Fall back to Bearer token authentication (API clients)
 			auth := r.Header.Get("Authorization")
 			if auth == "" || !strings.HasPrefix(auth, "Bearer ") {
 				writeUnauthorized(w, "authorization required")

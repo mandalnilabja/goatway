@@ -77,8 +77,8 @@ func NewRouter(repo *handler.Repo, opts *RouterOptions) http.Handler {
 
 // registerAdminRoutes adds all admin API routes to the router.
 func registerAdminRoutes(mux *http.ServeMux, repo *handler.Repo, opts *RouterOptions) {
-	// Create admin auth middleware using stored password hash
-	adminAuth := auth.AdminAuth(opts.Storage)
+	// Create admin auth middleware using stored password hash and session store
+	adminAuth := auth.AdminAuth(opts.Storage, opts.SessionStore)
 
 	// Helper to wrap handler with admin auth
 	withAuth := func(h http.HandlerFunc) http.Handler {
