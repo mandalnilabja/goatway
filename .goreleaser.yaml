@@ -8,7 +8,7 @@ env:
 
 before:
   hooks:
-    - go mod tidy
+    - go mod verify
 
 builds:
   - id: goatway
@@ -34,10 +34,12 @@ builds:
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     files:
       - LICENSE
       - README.md
@@ -62,6 +64,24 @@ changelog:
       regexp: "^.*fix.*:+.*$"
     - title: Refactoring
       regexp: "^.*refactor.*:+.*$"
+
+homebrew_casks:
+  - repository:
+      owner: mandalnilabja
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/mandalnilabja/goatway"
+    description: "Lightweight, streaming-safe, OpenAI-compatible HTTP proxy for LLM providers"
+    caveats: |
+      If macOS shows "goatway is damaged", run:
+        xattr -dr com.apple.quarantine $(which goatway)
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/goatway"]
+          end
 
 release:
   github:
