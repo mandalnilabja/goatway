@@ -30,18 +30,29 @@ make clean        # Remove build artifacts
 ```
 cmd/api/main.go          # Entry point: wires config → provider → handlers → router → server
 internal/
-  config/config.go       # Environment-based configuration
+  config/                # Environment-based configuration
   provider/
-    provider.go          # Provider interface (Name, BaseURL, PrepareRequest, ProxyRequest)
-    openrouter.go        # OpenRouter implementation with streaming proxy
+    provider.go          # Provider interface
+    openrouter/          # OpenRouter implementation with streaming proxy
   app/
     router.go            # Route registration (http.ServeMux)
     server.go            # HTTP server wrapper
-  transport/http/handler/
-    repo.go              # Handler repository (holds Cache, Provider)
-    proxy.go             # OpenAI-compatible proxy endpoint
-    health.go            # Health check and home handlers
-    cache.go             # Cache demonstration handler
+  storage/
+    storage.go           # Storage interface
+    sqlite/              # SQLite implementation
+    models/              # Data models
+    encryption/          # AES encryption for API keys
+  tokenizer/             # Token counting for requests
+  transport/http/
+    handler/
+      handler.go         # Handler repository (composes domain handlers)
+      admin/             # Admin API handlers (credentials, apikeys, usage)
+      proxy/             # OpenAI-compatible proxy endpoints
+      webui/             # Web UI handlers
+      infra/             # Health and cache handlers
+      shared/            # Shared utilities
+    middleware/          # CORS, RequestID, Auth, Logging
+  types/                 # OpenAI-compatible type definitions
 ```
 
 **Request Flow**: `Client → Router → Handler (Repo) → Provider.ProxyRequest → Upstream LLM → Streaming Response`

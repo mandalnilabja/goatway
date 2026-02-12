@@ -122,20 +122,31 @@ goatway/
 │   │
 │   ├── provider/
 │   │   ├── provider.go          # Provider interface definition
-│   │   ├── openrouter.go        # OpenRouter implementation
-│   │   ├── openrouter_response.go # Response handling (streaming/JSON/error)
-│   │   └── stream.go            # SSE stream processor
+│   │   └── openrouter/
+│   │       ├── client.go        # OpenRouter provider implementation
+│   │       ├── response.go      # Response handling (streaming/JSON/error)
+│   │       └── stream.go        # SSE stream processor
 │   │
 │   ├── storage/
-│   │   ├── storage.go           # Storage interface definition
-│   │   ├── models.go            # Data models (Credential, RequestLog, etc.)
-│   │   ├── sqlite.go            # SQLite implementation, migrations
-│   │   ├── sqlite_credentials.go # Credential CRUD operations
-│   │   ├── sqlite_credentials_read.go # Credential read operations
-│   │   ├── sqlite_logs.go       # Request logging operations
-│   │   ├── sqlite_usage.go      # Usage statistics operations
-│   │   ├── sqlite_helpers.go    # SQL helper functions
-│   │   └── encryption.go        # AES-256-GCM encryption for API keys
+│   │   ├── storage.go           # Storage interface definition and factory
+│   │   ├── argon2.go            # Argon2 password hashing
+│   │   ├── keygen.go            # API key generation
+│   │   ├── models/
+│   │   │   ├── credential.go    # Credential model
+│   │   │   ├── apikey.go        # Client API key model
+│   │   │   ├── log.go           # Request log model
+│   │   │   └── usage.go         # Usage statistics models
+│   │   ├── sqlite/
+│   │   │   ├── sqlite.go        # SQLite storage implementation and schema
+│   │   │   ├── credentials.go   # Credential CRUD operations
+│   │   │   ├── apikeys.go       # API key CRUD operations
+│   │   │   ├── logs.go          # Request logging operations
+│   │   │   ├── usage.go         # Usage statistics operations
+│   │   │   ├── admin.go         # Admin settings operations
+│   │   │   ├── helpers.go       # SQL helper functions
+│   │   │   └── errors.go        # Storage error definitions
+│   │   └── encryption/
+│   │       └── aes.go           # AES-256-GCM encryption for API keys
 │   │
 │   ├── tokenizer/
 │   │   ├── tokenizer.go         # Tokenizer interface and tiktoken implementation
@@ -146,17 +157,40 @@ goatway/
 │   ├── transport/
 │   │   └── http/
 │   │       ├── handler/
-│   │       │   ├── repo.go           # Handler repository struct
-│   │       │   ├── proxy.go          # OpenAI-compatible proxy endpoint
-│   │       │   ├── models.go         # /v1/models endpoint
-│   │       │   ├── health.go         # Health check endpoints
-│   │       │   ├── cache.go          # Cache demo endpoint
-│   │       │   ├── webui.go          # Web UI serving
-│   │       │   ├── admin_credentials.go # Credential management endpoints
-│   │       │   ├── admin_usage.go    # Usage statistics endpoints
-│   │       │   └── admin_system.go   # System info endpoints
+│   │       │   ├── handler.go       # Handler repository (composes domain handlers)
+│   │       │   ├── admin/
+│   │       │   │   ├── admin.go         # Admin handlers constructor
+│   │       │   │   ├── credentials.go   # Credential management endpoints
+│   │       │   │   ├── apikeys.go       # API key management endpoints
+│   │       │   │   ├── usage.go         # Usage statistics endpoints
+│   │       │   │   └── system.go        # System info endpoints
+│   │       │   ├── proxy/
+│   │       │   │   ├── proxy.go         # Proxy handlers constructor and shared logic
+│   │       │   │   ├── chat.go          # POST /v1/chat/completions
+│   │       │   │   ├── completions.go   # POST /v1/completions (legacy)
+│   │       │   │   ├── models.go        # GET /v1/models
+│   │       │   │   ├── embeddings.go    # POST /v1/embeddings
+│   │       │   │   ├── audio.go         # Audio endpoints
+│   │       │   │   ├── images.go        # Image endpoints
+│   │       │   │   └── moderations.go   # Moderation endpoint
+│   │       │   ├── webui/
+│   │       │   │   ├── webui.go         # Web UI handlers constructor
+│   │       │   │   ├── serve.go         # Static file serving
+│   │       │   │   └── auth.go          # Login, Logout, LoginPage
+│   │       │   ├── infra/
+│   │       │   │   ├── infra.go         # Infrastructure handlers constructor
+│   │       │   │   ├── health.go        # Health check endpoints
+│   │       │   │   └── cache.go         # Cache demo endpoint
+│   │       │   └── shared/
+│   │       │       └── shared.go        # writeJSON, writeError utilities
 │   │       └── middleware/
-│   │           └── middleware.go     # CORS, RequestID, Auth, Logging
+│   │           ├── cors.go          # CORS middleware
+│   │           ├── requestid.go     # Request ID middleware
+│   │           ├── logging.go       # Request logging middleware
+│   │           └── auth/
+│   │               ├── admin.go     # Admin authentication
+│   │               ├── apikey.go    # API key authentication
+│   │               └── session.go   # Session authentication
 │   │
 │   └── types/
 │       ├── request.go           # ChatCompletionRequest types
@@ -165,10 +199,17 @@ goatway/
 │       ├── message.go           # Message and Content types
 │       ├── tools.go             # Tool/Function calling types
 │       ├── errors.go            # OpenAI-compatible error types
+│       ├── completions.go       # Legacy completions types
+│       ├── embeddings.go        # Embeddings types
+│       ├── audio.go             # Audio types
+│       ├── images.go            # Image types
+│       ├── moderations.go       # Moderation types
 │       └── json.go              # JSON marshaling helpers
 │
 ├── web/
-│   └── embed.go                 # Embedded web UI assets
+│   ├── embed.go                 # Embedded web UI assets
+│   ├── index.html               # Web UI HTML
+│   └── static/                  # CSS and JS assets
 │
 ├── docs/
 │   └── MAINTAINER.md            # This file
@@ -235,12 +276,12 @@ goatway/
 | Step | File | Function |
 |------|------|----------|
 | Routing | [router.go](../internal/app/router.go) | `NewRouter()` |
-| Handler | [proxy.go](../internal/transport/http/handler/proxy.go) | `OpenAIProxy()` |
-| API Key | [proxy.go](../internal/transport/http/handler/proxy.go) | `resolveAPIKey()` |
-| Proxying | [openrouter.go](../internal/provider/openrouter.go) | `ProxyRequest()` |
-| Streaming | [openrouter_response.go](../internal/provider/openrouter_response.go) | `handleStreamingResponse()` |
-| SSE Parsing | [stream.go](../internal/provider/stream.go) | `StreamProcessor` |
-| Logging | [proxy.go](../internal/transport/http/handler/proxy.go) | `logRequest()` |
+| Handler | [chat.go](../internal/transport/http/handler/proxy/chat.go) | `ChatCompletions()` |
+| API Key | [proxy.go](../internal/transport/http/handler/proxy/proxy.go) | `resolveAPIKey()` |
+| Proxying | [client.go](../internal/provider/openrouter/client.go) | `ProxyRequest()` |
+| Streaming | [response.go](../internal/provider/openrouter/response.go) | `handleStreamingResponse()` |
+| SSE Parsing | [stream.go](../internal/provider/openrouter/stream.go) | `StreamProcessor` |
+| Logging | [chat.go](../internal/transport/http/handler/proxy/chat.go) | `logRequest()` |
 
 ---
 
@@ -252,12 +293,12 @@ Streaming is the most critical aspect of Goatway. Any changes to streaming code 
 
 1. **`http.Transport.DisableCompression` MUST be `true`**
    - Prevents gzip encoding which breaks SSE parsing
-   - Located in [openrouter.go:91-94](../internal/provider/openrouter.go#L91-L94)
+   - Located in [client.go](../internal/provider/openrouter/client.go)
 
 2. **Flush after every write**
    - SSE requires immediate flushing
    - Never buffer chunks
-   - Located in [openrouter_response.go:32-33](../internal/provider/openrouter_response.go#L32-L33)
+   - Located in [response.go](../internal/provider/openrouter/response.go)
 
 3. **No buffering or accumulation**
    - Stream processor observes but doesn't transform
@@ -294,7 +335,7 @@ result.Model = processor.GetModel()
 
 ### StreamProcessor
 
-The `StreamProcessor` in [stream.go](../internal/provider/stream.go) parses SSE chunks while forwarding them:
+The `StreamProcessor` in [stream.go](../internal/provider/openrouter/stream.go) parses SSE chunks while forwarding them:
 
 ```go
 type StreamProcessor struct {
@@ -363,19 +404,18 @@ type ProxyResult struct {
 
 ### Handler Repository
 
-The `Repo` struct in [repo.go](../internal/transport/http/handler/repo.go) holds all handler dependencies:
+The `Repo` struct in [handler.go](../internal/transport/http/handler/handler.go) composes domain-specific handlers:
 
 ```go
 type Repo struct {
-    Cache     *ristretto.Cache[string, any]
-    Provider  provider.Provider
-    Storage   storage.Storage
-    Tokenizer tokenizer.Tokenizer
-    StartTime time.Time
+    Admin *admin.Handlers
+    WebUI *webui.Handlers
+    Proxy *proxy.Handlers
+    Infra *infra.Handlers
 }
 ```
 
-All HTTP handlers are methods on this struct, enabling clean dependency injection.
+Each domain package (admin, webui, proxy, infra) has its own `Handlers` struct with only the dependencies it needs, enabling clean separation of concerns.
 
 ### Storage Interface
 
@@ -404,7 +444,6 @@ type Storage interface {
 
     // Maintenance
     Close() error
-    Migrate() error
 }
 ```
 
@@ -499,7 +538,7 @@ API keys are encrypted at rest using AES-256-GCM. The encryption key is derived 
 1. `GOATWAY_ENCRYPTION_KEY` environment variable (if set)
 2. Machine-specific key (hostname + home dir + OS/arch)
 
-See [encryption.go](../internal/storage/encryption.go) for implementation.
+See [aes.go](../internal/storage/encryption/aes.go) for implementation.
 
 ---
 
