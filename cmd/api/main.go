@@ -18,13 +18,7 @@ import (
 	"github.com/mandalnilabja/goatway/internal/tokenizer"
 	"github.com/mandalnilabja/goatway/internal/transport/http/handler"
 	"github.com/mandalnilabja/goatway/internal/transport/http/middleware/auth"
-)
-
-// Version information - set via ldflags at build time
-var (
-	Version   = "dev"
-	Commit    = "unknown"
-	BuildTime = "unknown"
+	"github.com/mandalnilabja/goatway/internal/version"
 )
 
 func main() {
@@ -202,14 +196,14 @@ func isValidAdminPassword(password string) bool {
 }
 
 func printVersion() {
-	fmt.Printf("goatway %s\n", Version)
-	fmt.Printf("  commit:  %s\n", Commit)
-	fmt.Printf("  built:   %s\n", BuildTime)
+	fmt.Printf("goatway %s\n", version.Version)
+	fmt.Printf("  commit:  %s\n", version.Commit)
+	fmt.Printf("  built:   %s\n", version.BuildTime)
 }
 
 func printStartupBanner(cfg *config.Config) {
 	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "🐐 Goatway %s - Local OpenAI-Compatible Proxy\n", Version)
+	fmt.Fprintf(os.Stderr, "🐐 Goatway %s - Local OpenAI-Compatible Proxy\n", version.Version)
 	fmt.Fprintln(os.Stderr, "════════════════════════════════════════════════")
 	if cfg.EnableWebUI {
 		fmt.Fprintf(os.Stderr, "Web UI:     http://localhost%s/web\n", cfg.ServerAddr)

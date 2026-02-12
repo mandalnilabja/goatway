@@ -10,7 +10,7 @@ COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 
 # Linker flags to inject version info
-LDFLAGS=-ldflags "-s -w -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildTime=$(BUILD_TIME)"
+LDFLAGS=-ldflags "-s -w -X github.com/mandalnilabja/goatway/internal/version.Version=$(VERSION) -X github.com/mandalnilabja/goatway/internal/version.Commit=$(COMMIT) -X github.com/mandalnilabja/goatway/internal/version.BuildTime=$(BUILD_TIME)"
 
 GOIMPORTS=$(TOOLS_DIR)/goimports
 GOLANGCI_LINT=$(TOOLS_DIR)/golangci-lint
@@ -94,6 +94,17 @@ release-check: $(GORELEASER)
 	@echo "Checking goreleaser config..."
 	$(GORELEASER) check
 
+# Create and push a release tag
+# Usage: make tag V=0.1.2
+tag:
+	@if [ -z "$(V)" ]; then echo "Usage: make tag V=x.y.z"; exit 1; fi
+	@if ! echo "$(V)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$$'; then \
+		echo "Error: Version must be semver (x.y.z)"; exit 1; fi
+	@echo "Creating tag v$(V)..."
+	git tag -a "v$(V)" -m "Release v$(V)"
+	git push origin "v$(V)"
+	@echo "Tag v$(V) pushed. GitHub Actions will create the release."
+
 test:
 	@echo "Running tests..."
 	go test -v ./...
@@ -122,4 +133,4 @@ clean:
 clean-dist:
 	@rm -rf $(DIST_DIR)
 
-.PHONY: all build run test fmt fmt-check lint clean clean-dist tools install build-all release-manual release-snapshot release release-check
+.PHONY: all build run test fmt fmt-check lint clean clean-dist tools install build-all release-manual release-snapshot release release-check tag

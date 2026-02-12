@@ -9,10 +9,8 @@ import (
 	"github.com/mandalnilabja/goatway/internal/config"
 	"github.com/mandalnilabja/goatway/internal/storage"
 	"github.com/mandalnilabja/goatway/internal/transport/http/handler/shared"
+	"github.com/mandalnilabja/goatway/internal/version"
 )
-
-// Version is set at build time.
-var Version = "dev"
 
 // AdminHealth handles GET /api/admin/health.
 func (h *Handlers) AdminHealth(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +39,7 @@ func (h *Handlers) AdminInfo(w http.ResponseWriter, r *http.Request) {
 	creds, _ := h.Storage.ListCredentials()
 
 	shared.WriteJSON(w, map[string]any{
-		"version":     Version,
+		"version":     version.Version,
 		"go_version":  runtime.Version(),
 		"uptime":      uptime.String(),
 		"uptime_secs": int64(uptime.Seconds()),

@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/mandalnilabja/goatway/internal/transport/http/handler/admin"
+	"github.com/mandalnilabja/goatway/internal/version"
 )
 
 // RootStatus returns JSON status and version information at /.
 func (h *Handlers) RootStatus(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"name":    "goatway",
-		"version": admin.Version,
+		"version": version.Version,
 		"status":  "running",
 		"web_ui":  "/web",
 		"api":     "/v1",

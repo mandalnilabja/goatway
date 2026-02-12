@@ -28,9 +28,9 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X main.Version={{.Version}}
-      - -X main.Commit={{.Commit}}
-      - -X main.BuildTime={{.CommitDate}}
+      - -X github.com/mandalnilabja/goatway/internal/version.Version={{.Version}}
+      - -X github.com/mandalnilabja/goatway/internal/version.Commit={{.Commit}}
+      - -X github.com/mandalnilabja/goatway/internal/version.BuildTime={{.CommitDate}}
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
