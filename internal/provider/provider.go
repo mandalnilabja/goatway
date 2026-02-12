@@ -2,10 +2,14 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"time"
 )
+
+// ErrNoAPIKey is returned when no API key is configured for a request
+var ErrNoAPIKey = errors.New("no API key configured")
 
 // Provider defines the interface all LLM providers must implement
 type Provider interface {

@@ -53,6 +53,52 @@ func (h *Repo) AdminInfo(w http.ResponseWriter, r *http.Request) {
 	}, http.StatusOK)
 }
 
+// ChangePasswordRequest is the request body for changing admin password.
+type ChangePasswordRequest struct {
+	NewPassword string `json:"new_password"`
+}
+
+// ChangeAdminPassword changes the admin password (PUT /api/admin/password).
+func (h *Repo) ChangeAdminPassword(w http.ResponseWriter, r *http.Request) {
+	var req ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if !IsValidAdminPassword(req.NewPassword) {
+		writeJSONError(w, "password must be alphanumeric, min 8 characters", http.StatusBadRequest)
+		return
+	}
+
+	hash, err := storage.HashPassword(req.NewPassword, storage.DefaultArgon2Params())
+	if err != nil {
+		writeJSONError(w, "failed to hash password", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.Storage.SetAdminPasswordHash(hash); err != nil {
+		writeJSONError(w, "failed to save password", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"message": "password updated"}, http.StatusOK)
+}
+
+// IsValidAdminPassword validates the admin password format.
+// Password must be alphanumeric (a-z, A-Z, 0-9) with minimum 8 characters.
+func IsValidAdminPassword(password string) bool {
+	if len(password) < 8 {
+		return false
+	}
+	for _, c := range password {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+			return false
+		}
+	}
+	return true
+}
+
 // writeJSON writes a JSON response with the given status code
 func writeJSON(w http.ResponseWriter, data any, status int) {
 	w.Header().Set("Content-Type", "application/json")

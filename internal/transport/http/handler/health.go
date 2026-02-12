@@ -5,9 +5,18 @@ import (
 	"net/http"
 )
 
-// Home handler returns a welcome message
-func (h *Repo) Home(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Welcome to Goatway API!"))
+// RootStatus returns JSON status and version information at /
+func (h *Repo) RootStatus(w http.ResponseWriter, r *http.Request) {
+	response := map[string]interface{}{
+		"name":    "goatway",
+		"version": Version,
+		"status":  "running",
+		"web_ui":  "/web",
+		"api":     "/v1",
+		"admin":   "/api/admin",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // HealthCheck handler returns the application health status

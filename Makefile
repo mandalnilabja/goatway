@@ -14,13 +14,14 @@ LDFLAGS=-ldflags "-s -w -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X m
 
 GOIMPORTS=$(TOOLS_DIR)/goimports
 GOLANGCI_LINT=$(TOOLS_DIR)/golangci-lint
+GORELEASER=$(TOOLS_DIR)/goreleaser
 
 # Default command
 all: test build
 
 # -------- TOOLS --------
 
-tools: $(GOIMPORTS) $(GOLANGCI_LINT)
+tools: $(GOIMPORTS) $(GOLANGCI_LINT) $(GORELEASER)
 
 $(GOIMPORTS):
 	@echo "Installing goimports..."
@@ -31,6 +32,11 @@ $(GOLANGCI_LINT):
 	@echo "Installing golangci-lint..."
 	mkdir -p $(TOOLS_DIR)
 	GOBIN=$(abspath $(TOOLS_DIR)) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
+
+$(GORELEASER):
+	@echo "Installing goreleaser..."
+	mkdir -p $(TOOLS_DIR)
+	GOBIN=$(abspath $(TOOLS_DIR)) go install github.com/goreleaser/goreleaser/v2@latest
 
 # -------- BUILD --------
 
@@ -60,8 +66,8 @@ build-all: clean-dist
 	@echo "Binaries built in $(DIST_DIR)/"
 	@ls -la $(DIST_DIR)/
 
-# Create release archives
-release: build-all
+# Create release archives (manual method)
+release-manual: build-all
 	@echo "Creating release archives..."
 	cd $(DIST_DIR) && tar -czf $(BINARY_NAME)-darwin-amd64.tar.gz $(BINARY_NAME)-darwin-amd64
 	cd $(DIST_DIR) && tar -czf $(BINARY_NAME)-darwin-arm64.tar.gz $(BINARY_NAME)-darwin-arm64
@@ -70,6 +76,23 @@ release: build-all
 	cd $(DIST_DIR) && zip -q $(BINARY_NAME)-windows-amd64.zip $(BINARY_NAME)-windows-amd64.exe
 	@echo "Release archives created:"
 	@ls -la $(DIST_DIR)/*.tar.gz $(DIST_DIR)/*.zip
+
+# -------- GORELEASER --------
+
+# Test release locally (creates binaries in dist/ without publishing)
+release-snapshot: $(GORELEASER)
+	@echo "Creating snapshot release..."
+	$(GORELEASER) release --snapshot --clean
+
+# Create and publish release (requires GITHUB_TOKEN and a git tag)
+release: $(GORELEASER)
+	@echo "Creating release..."
+	$(GORELEASER) release --clean
+
+# Check goreleaser config
+release-check: $(GORELEASER)
+	@echo "Checking goreleaser config..."
+	$(GORELEASER) check
 
 test:
 	@echo "Running tests..."
@@ -99,4 +122,4 @@ clean:
 clean-dist:
 	@rm -rf $(DIST_DIR)
 
-.PHONY: all build run test fmt fmt-check lint clean clean-dist tools install build-all release
+.PHONY: all build run test fmt fmt-check lint clean clean-dist tools install build-all release-manual release-snapshot release release-check

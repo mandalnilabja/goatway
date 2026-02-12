@@ -34,7 +34,6 @@ func NewServer(cfg *config.Config, handler http.Handler) *Server {
 // Start begins listening and serving HTTP requests
 func (s *Server) Start() error {
 	log.Printf("Goatway server starting on http://localhost%s", s.config.ServerAddr)
-	log.Printf("Using LLM provider: %s", s.config.Provider)
 
 	if err := s.httpServer.ListenAndServe(); err != nil {
 		return err

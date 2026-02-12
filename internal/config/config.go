@@ -1,61 +1,23 @@
 package config
 
-import (
-	"os"
-)
+import "os"
 
-// Config holds application configuration loaded from environment variables
+// Config holds application configuration loaded from environment variables.
+// All LLM provider credentials are stored in the database, not environment variables.
 type Config struct {
-	// Server settings
+	// ServerAddr is the address to bind the server to (e.g., ":8080")
 	ServerAddr string
-	LogLevel   string
-	LogFormat  string // "json" or "text"
 
-	// Provider settings (legacy - prefer credentials from storage)
-	Provider         string
-	OpenRouterAPIKey string
-	OpenAIAPIKey     string
-	OpenAIOrg        string
-	AzureAPIKey      string
-	AzureEndpoint    string
-	AnthropicAPIKey  string
-
-	// Storage settings
-	DataDir       string // Override for data directory
-	EncryptionKey string // Optional encryption key for API keys at rest
-
-	// Security settings
-	AdminPassword string // Optional password for admin API access
-
-	// Feature flags
+	// EnableWebUI enables the web dashboard at /web
 	EnableWebUI bool
 }
 
-// Load reads configuration from environment variables with sensible defaults
+// Load reads configuration from environment variables with sensible defaults.
+// Only SERVER_ADDR and ENABLE_WEB_UI are supported as environment variables.
+// All other configuration (credentials, API keys) must be set via the admin API.
 func Load() *Config {
 	return &Config{
-		// Server settings
-		ServerAddr: getEnv("SERVER_ADDR", ":8080"),
-		LogLevel:   getEnv("LOG_LEVEL", "info"),
-		LogFormat:  getEnv("LOG_FORMAT", "text"),
-
-		// Provider settings
-		Provider:         getEnv("LLM_PROVIDER", "openrouter"),
-		OpenRouterAPIKey: getEnv("OPENROUTER_API_KEY", ""),
-		OpenAIAPIKey:     getEnv("OPENAI_API_KEY", ""),
-		OpenAIOrg:        getEnv("OPENAI_ORG", ""),
-		AzureAPIKey:      getEnv("AZURE_API_KEY", ""),
-		AzureEndpoint:    getEnv("AZURE_ENDPOINT", ""),
-		AnthropicAPIKey:  getEnv("ANTHROPIC_API_KEY", ""),
-
-		// Storage settings
-		DataDir:       getEnv("GOATWAY_DATA_DIR", ""),
-		EncryptionKey: getEnv("GOATWAY_ENCRYPTION_KEY", ""),
-
-		// Security settings
-		AdminPassword: getEnv("GOATWAY_ADMIN_PASSWORD", ""),
-
-		// Feature flags
+		ServerAddr:  getEnv("SERVER_ADDR", ":8080"),
 		EnableWebUI: getEnvBool("ENABLE_WEB_UI", true),
 	}
 }
