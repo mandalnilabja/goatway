@@ -1,4 +1,4 @@
-package handler
+package admin
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ type CreateAPIKeyResponse struct {
 }
 
 // CreateAPIKey creates a new client API key (POST /api/admin/apikeys).
-func (h *Repo) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	var req CreateAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		types.WriteError(w, http.StatusBadRequest, types.ErrInvalidRequest("invalid request body"))
@@ -115,7 +115,7 @@ func (h *Repo) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListAPIKeys returns all API keys (GET /api/admin/apikeys).
-func (h *Repo) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
 	keys, err := h.Storage.ListAPIKeys()
 	if err != nil {
 		types.WriteError(w, http.StatusInternalServerError, types.ErrServer("failed to list keys"))
@@ -135,7 +135,7 @@ func (h *Repo) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAPIKeyByID returns a specific API key (GET /api/admin/apikeys/{id}).
-func (h *Repo) GetAPIKeyByID(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) GetAPIKeyByID(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		types.WriteError(w, http.StatusBadRequest, types.ErrInvalidRequest("id required"))
@@ -165,7 +165,7 @@ type UpdateAPIKeyRequest struct {
 }
 
 // UpdateAPIKey updates an API key (PUT /api/admin/apikeys/{id}).
-func (h *Repo) UpdateAPIKey(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) UpdateAPIKey(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		types.WriteError(w, http.StatusBadRequest, types.ErrInvalidRequest("id required"))
@@ -219,7 +219,7 @@ func (h *Repo) UpdateAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteAPIKey deletes an API key (DELETE /api/admin/apikeys/{id}).
-func (h *Repo) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		types.WriteError(w, http.StatusBadRequest, types.ErrInvalidRequest("id required"))
@@ -239,7 +239,7 @@ func (h *Repo) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 // RotateAPIKey generates a new key (POST /api/admin/apikeys/{id}/rotate).
-func (h *Repo) RotateAPIKey(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) RotateAPIKey(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		types.WriteError(w, http.StatusBadRequest, types.ErrInvalidRequest("id required"))

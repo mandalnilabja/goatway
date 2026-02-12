@@ -1,4 +1,4 @@
-package handler
+package proxy
 
 import (
 	"bytes"
@@ -9,13 +9,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mandalnilabja/goatway/internal/provider"
-	"github.com/mandalnilabja/goatway/internal/storage"
 	"github.com/mandalnilabja/goatway/internal/types"
 )
 
 // TextToSpeech handles POST /v1/audio/speech requests.
 // Converts text to spoken audio using TTS models.
-func (h *Repo) TextToSpeech(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) TextToSpeech(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	startTime := time.Now()
 
@@ -68,12 +67,12 @@ func (h *Repo) TextToSpeech(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logAudioRequest(requestID, credID, req.Model, "speech", result, startTime)
+	go h.logSimpleRequest(requestID, credID, req.Model, result, startTime)
 }
 
 // Transcription handles POST /v1/audio/transcriptions requests.
 // Converts audio to text using Whisper models.
-func (h *Repo) Transcription(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Transcription(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	startTime := time.Now()
 
@@ -118,12 +117,12 @@ func (h *Repo) Transcription(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logAudioRequest(requestID, credID, model, "transcription", result, startTime)
+	go h.logSimpleRequest(requestID, credID, model, result, startTime)
 }
 
 // Translation handles POST /v1/audio/translations requests.
 // Translates audio to English text using Whisper models.
-func (h *Repo) Translation(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Translation(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	startTime := time.Now()
 
@@ -167,45 +166,5 @@ func (h *Repo) Translation(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logAudioRequest(requestID, credID, model, "translation", result, startTime)
-}
-
-// logAudioRequest logs an audio request to storage.
-func (h *Repo) logAudioRequest(requestID, credentialID, model, operation string, result *provider.ProxyResult, startTime time.Time) {
-	if h.Storage == nil || result == nil {
-		return
-	}
-
-	duration := time.Since(startTime)
-
-	log := &storage.RequestLog{
-		ID:           uuid.New().String(),
-		RequestID:    requestID,
-		CredentialID: credentialID,
-		Model:        model,
-		Provider:     h.Provider.Name(),
-		IsStreaming:  false,
-		StatusCode:   result.StatusCode,
-		ErrorMessage: result.ErrorMessage,
-		DurationMs:   duration.Milliseconds(),
-		CreatedAt:    time.Now(),
-	}
-
-	_ = h.Storage.LogRequest(log)
-
-	// Update daily usage (audio doesn't have token counts)
-	errorCount := 0
-	if result.StatusCode >= 400 {
-		errorCount = 1
-	}
-
-	usage := &storage.DailyUsage{
-		Date:         time.Now().Format("2006-01-02"),
-		CredentialID: credentialID,
-		Model:        model,
-		RequestCount: 1,
-		ErrorCount:   errorCount,
-	}
-
-	_ = h.Storage.UpdateDailyUsage(usage)
+	go h.logSimpleRequest(requestID, credID, model, result, startTime)
 }

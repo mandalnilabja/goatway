@@ -1,4 +1,4 @@
-package handler
+package proxy
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 
 // LegacyCompletion handles POST /v1/completions requests.
 // This is the legacy text completion endpoint (deprecated but needed for compatibility).
-func (h *Repo) LegacyCompletion(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) LegacyCompletion(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	startTime := time.Now()
 
@@ -68,7 +68,7 @@ func (h *Repo) LegacyCompletion(w http.ResponseWriter, r *http.Request) {
 }
 
 // logCompletionRequest logs a completion request to storage.
-func (h *Repo) logCompletionRequest(requestID, credentialID string, result *provider.ProxyResult, startTime time.Time) {
+func (h *Handlers) logCompletionRequest(requestID, credentialID string, result *provider.ProxyResult, startTime time.Time) {
 	if h.Storage == nil || result == nil {
 		return
 	}

@@ -1,15 +1,17 @@
-package handler
+package infra
 
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/mandalnilabja/goatway/internal/transport/http/handler/admin"
 )
 
-// RootStatus returns JSON status and version information at /
-func (h *Repo) RootStatus(w http.ResponseWriter, r *http.Request) {
+// RootStatus returns JSON status and version information at /.
+func (h *Handlers) RootStatus(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"name":    "goatway",
-		"version": Version,
+		"version": admin.Version,
 		"status":  "running",
 		"web_ui":  "/web",
 		"api":     "/v1",
@@ -19,8 +21,8 @@ func (h *Repo) RootStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// HealthCheck handler returns the application health status
-func (h *Repo) HealthCheck(w http.ResponseWriter, r *http.Request) {
+// HealthCheck handler returns the application health status.
+func (h *Handlers) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
 		"status": "active",
 		"app":    "goatway",

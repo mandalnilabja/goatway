@@ -1,4 +1,4 @@
-package handler
+package admin
 
 import (
 	"net/http"
@@ -6,23 +6,24 @@ import (
 	"time"
 
 	"github.com/mandalnilabja/goatway/internal/storage"
+	"github.com/mandalnilabja/goatway/internal/transport/http/handler/shared"
 )
 
-// GetUsageStats handles GET /api/admin/usage
-func (h *Repo) GetUsageStats(w http.ResponseWriter, r *http.Request) {
+// GetUsageStats handles GET /api/admin/usage.
+func (h *Handlers) GetUsageStats(w http.ResponseWriter, r *http.Request) {
 	filter := parseStatsFilter(r)
 
 	stats, err := h.Storage.GetUsageStats(filter)
 	if err != nil {
-		writeJSONError(w, "Failed to get usage stats: "+err.Error(), http.StatusInternalServerError)
+		shared.WriteJSONError(w, "Failed to get usage stats: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, stats, http.StatusOK)
+	shared.WriteJSON(w, stats, http.StatusOK)
 }
 
-// GetDailyUsage handles GET /api/admin/usage/daily
-func (h *Repo) GetDailyUsage(w http.ResponseWriter, r *http.Request) {
+// GetDailyUsage handles GET /api/admin/usage/daily.
+func (h *Handlers) GetDailyUsage(w http.ResponseWriter, r *http.Request) {
 	startDate := r.URL.Query().Get("start_date")
 	endDate := r.URL.Query().Get("end_date")
 
@@ -36,61 +37,61 @@ func (h *Repo) GetDailyUsage(w http.ResponseWriter, r *http.Request) {
 
 	usage, err := h.Storage.GetDailyUsage(startDate, endDate)
 	if err != nil {
-		writeJSONError(w, "Failed to get daily usage: "+err.Error(), http.StatusInternalServerError)
+		shared.WriteJSONError(w, "Failed to get daily usage: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, map[string]any{
+	shared.WriteJSON(w, map[string]any{
 		"daily_usage": usage,
 		"start_date":  startDate,
 		"end_date":    endDate,
 	}, http.StatusOK)
 }
 
-// GetRequestLogs handles GET /api/admin/logs
-func (h *Repo) GetRequestLogs(w http.ResponseWriter, r *http.Request) {
+// GetRequestLogs handles GET /api/admin/logs.
+func (h *Handlers) GetRequestLogs(w http.ResponseWriter, r *http.Request) {
 	filter := parseLogFilter(r)
 
 	logs, err := h.Storage.GetRequestLogs(filter)
 	if err != nil {
-		writeJSONError(w, "Failed to get request logs: "+err.Error(), http.StatusInternalServerError)
+		shared.WriteJSONError(w, "Failed to get request logs: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, map[string]any{
+	shared.WriteJSON(w, map[string]any{
 		"logs":   logs,
 		"limit":  filter.Limit,
 		"offset": filter.Offset,
 	}, http.StatusOK)
 }
 
-// DeleteRequestLogs handles DELETE /api/admin/logs
-func (h *Repo) DeleteRequestLogs(w http.ResponseWriter, r *http.Request) {
+// DeleteRequestLogs handles DELETE /api/admin/logs.
+func (h *Handlers) DeleteRequestLogs(w http.ResponseWriter, r *http.Request) {
 	beforeDate := r.URL.Query().Get("before_date")
 	if beforeDate == "" {
-		writeJSONError(w, "before_date query parameter is required (format: YYYY-MM-DD)", http.StatusBadRequest)
+		shared.WriteJSONError(w, "before_date query parameter is required (format: YYYY-MM-DD)", http.StatusBadRequest)
 		return
 	}
 
 	// Validate date format
 	if _, err := time.Parse("2006-01-02", beforeDate); err != nil {
-		writeJSONError(w, "Invalid date format. Use YYYY-MM-DD", http.StatusBadRequest)
+		shared.WriteJSONError(w, "Invalid date format. Use YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
 	deleted, err := h.Storage.DeleteRequestLogs(beforeDate)
 	if err != nil {
-		writeJSONError(w, "Failed to delete logs: "+err.Error(), http.StatusInternalServerError)
+		shared.WriteJSONError(w, "Failed to delete logs: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, map[string]any{
+	shared.WriteJSON(w, map[string]any{
 		"deleted_count": deleted,
 		"before_date":   beforeDate,
 	}, http.StatusOK)
 }
 
-// parseLogFilter creates a LogFilter from query parameters
+// parseLogFilter creates a LogFilter from query parameters.
 func parseLogFilter(r *http.Request) storage.LogFilter {
 	filter := storage.LogFilter{
 		Limit:  50, // default
@@ -135,7 +136,7 @@ func parseLogFilter(r *http.Request) storage.LogFilter {
 	return filter
 }
 
-// parseStatsFilter creates a StatsFilter from query parameters
+// parseStatsFilter creates a StatsFilter from query parameters.
 func parseStatsFilter(r *http.Request) storage.StatsFilter {
 	filter := storage.StatsFilter{}
 

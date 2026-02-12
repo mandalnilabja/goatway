@@ -1,4 +1,4 @@
-package handler
+package webui
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 )
 
 // LoginPage serves the login HTML page (GET /web/login).
-func (h *Repo) LoginPage(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 	errorParam := r.URL.Query().Get("error")
 
 	errorHTML := ""
@@ -96,7 +96,7 @@ func (h *Repo) LoginPage(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
     <div class="login-container">
-        <h1>🐐 Goatway</h1>
+        <h1>Goatway</h1>
         <p class="subtitle">Admin Dashboard</p>
         <form method="POST" action="/web/login">
             <div class="form-group">
@@ -112,7 +112,7 @@ func (h *Repo) LoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login handles POST /web/login.
-func (h *Repo) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 
 	hash, err := h.Storage.GetAdminPasswordHash()
@@ -139,7 +139,7 @@ func (h *Repo) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout handles POST /web/logout.
-func (h *Repo) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("goatway_session")
 	if cookie != nil && h.SessionStore != nil {
 		h.SessionStore.Delete(cookie.Value)

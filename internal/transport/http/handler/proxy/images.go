@@ -1,4 +1,4 @@
-package handler
+package proxy
 
 import (
 	"bytes"
@@ -9,13 +9,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mandalnilabja/goatway/internal/provider"
-	"github.com/mandalnilabja/goatway/internal/storage"
 	"github.com/mandalnilabja/goatway/internal/types"
 )
 
 // ImageGeneration handles POST /v1/images/generations requests.
 // Generates images from text prompts using DALL-E or similar models.
-func (h *Repo) ImageGeneration(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ImageGeneration(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	startTime := time.Now()
 
@@ -66,12 +65,12 @@ func (h *Repo) ImageGeneration(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logImageRequest(requestID, credID, model, "generation", result, startTime)
+	go h.logSimpleRequest(requestID, credID, model, result, startTime)
 }
 
 // ImageEdit handles POST /v1/images/edits requests.
 // Edits images based on a prompt and optional mask.
-func (h *Repo) ImageEdit(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ImageEdit(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	startTime := time.Now()
 
@@ -121,12 +120,12 @@ func (h *Repo) ImageEdit(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logImageRequest(requestID, credID, model, "edit", result, startTime)
+	go h.logSimpleRequest(requestID, credID, model, result, startTime)
 }
 
 // ImageVariation handles POST /v1/images/variations requests.
 // Creates variations of an existing image.
-func (h *Repo) ImageVariation(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ImageVariation(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	startTime := time.Now()
 
@@ -169,45 +168,5 @@ func (h *Repo) ImageVariation(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logImageRequest(requestID, credID, model, "variation", result, startTime)
-}
-
-// logImageRequest logs an image request to storage.
-func (h *Repo) logImageRequest(requestID, credentialID, model, operation string, result *provider.ProxyResult, startTime time.Time) {
-	if h.Storage == nil || result == nil {
-		return
-	}
-
-	duration := time.Since(startTime)
-
-	log := &storage.RequestLog{
-		ID:           uuid.New().String(),
-		RequestID:    requestID,
-		CredentialID: credentialID,
-		Model:        model,
-		Provider:     h.Provider.Name(),
-		IsStreaming:  false,
-		StatusCode:   result.StatusCode,
-		ErrorMessage: result.ErrorMessage,
-		DurationMs:   duration.Milliseconds(),
-		CreatedAt:    time.Now(),
-	}
-
-	_ = h.Storage.LogRequest(log)
-
-	// Update daily usage (images don't have token counts)
-	errorCount := 0
-	if result.StatusCode >= 400 {
-		errorCount = 1
-	}
-
-	usage := &storage.DailyUsage{
-		Date:         time.Now().Format("2006-01-02"),
-		CredentialID: credentialID,
-		Model:        model,
-		RequestCount: 1,
-		ErrorCount:   errorCount,
-	}
-
-	_ = h.Storage.UpdateDailyUsage(usage)
+	go h.logSimpleRequest(requestID, credID, model, result, startTime)
 }

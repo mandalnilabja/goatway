@@ -1,11 +1,10 @@
-package handler
+package proxy
 
 import (
 	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,9 +16,9 @@ import (
 // tokenCountTimeout is the maximum time to wait for token counting before proceeding.
 const tokenCountTimeout = 100 * time.Millisecond
 
-// OpenAIProxy forwards requests to the configured LLM provider with logging.
+// ChatCompletions forwards requests to the configured LLM provider with logging.
 // Token counting runs in parallel with the proxy request to minimize latency.
-func (h *Repo) OpenAIProxy(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 
 	// Read and buffer the request body
@@ -82,32 +81,11 @@ func (h *Repo) OpenAIProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the request asynchronously
-	go h.logRequest(requestID, credID, result, promptTokens)
+	go h.logChatRequest(requestID, credID, result, promptTokens)
 }
 
-// resolveAPIKey extracts API key from Authorization header or default credential.
-func (h *Repo) resolveAPIKey(r *http.Request) (apiKey string, credentialID string) {
-	// Check Authorization header
-	auth := r.Header.Get("Authorization")
-	if auth != "" {
-		if strings.HasPrefix(auth, "Bearer ") {
-			return strings.TrimPrefix(auth, "Bearer "), ""
-		}
-	}
-
-	// Fall back to default credential from storage
-	if h.Storage != nil {
-		cred, err := h.Storage.GetDefaultCredential(h.Provider.Name())
-		if err == nil && cred != nil {
-			return cred.APIKey, cred.ID
-		}
-	}
-
-	return "", ""
-}
-
-// logRequest logs the proxy request to storage asynchronously.
-func (h *Repo) logRequest(requestID, credentialID string, result *provider.ProxyResult, promptTokens int) {
+// logChatRequest logs the proxy request to storage asynchronously.
+func (h *Handlers) logChatRequest(requestID, credentialID string, result *provider.ProxyResult, promptTokens int) {
 	if h.Storage == nil || result == nil {
 		return
 	}
@@ -145,32 +123,4 @@ func (h *Repo) logRequest(requestID, credentialID string, result *provider.Proxy
 
 	// Update daily usage aggregates
 	h.updateDailyUsage(credentialID, result, prompt, completion, total)
-}
-
-// updateDailyUsage updates the daily usage aggregate for this request.
-func (h *Repo) updateDailyUsage(credentialID string, result *provider.ProxyResult, prompt, completion, total int) {
-	today := time.Now().Format("2006-01-02")
-
-	errorCount := 0
-	if result.StatusCode >= 400 {
-		errorCount = 1
-	}
-
-	usage := &storage.DailyUsage{
-		Date:             today,
-		CredentialID:     credentialID,
-		Model:            result.Model,
-		RequestCount:     1,
-		PromptTokens:     prompt,
-		CompletionTokens: completion,
-		TotalTokens:      total,
-		ErrorCount:       errorCount,
-	}
-
-	_ = h.Storage.UpdateDailyUsage(usage)
-}
-
-// writeError writes an OpenAI-compatible error response.
-func (h *Repo) writeError(w http.ResponseWriter, message string, status int) {
-	types.WriteError(w, status, types.ErrAuthentication(message))
 }

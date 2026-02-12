@@ -1,4 +1,4 @@
-package handler
+package webui
 
 import (
 	"io/fs"
@@ -11,7 +11,7 @@ import (
 // WebUIHandler creates an HTTP handler for serving the embedded web UI.
 // It serves static files from the embedded filesystem and falls back to
 // index.html for SPA routing (History API).
-func (h *Repo) WebUIHandler() http.Handler {
+func (h *Handlers) WebUIHandler() http.Handler {
 	// Get the embedded filesystem
 	staticFS, err := fs.Sub(web.FS, ".")
 	if err != nil {
@@ -46,6 +46,6 @@ func (h *Repo) WebUIHandler() http.Handler {
 
 // ServeWebUI is a convenience method that returns the WebUI handler.
 // Use this in route registration.
-func (h *Repo) ServeWebUI() http.Handler {
+func (h *Handlers) ServeWebUI() http.Handler {
 	return h.WebUIHandler()
 }

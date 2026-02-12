@@ -1,4 +1,4 @@
-package handler
+package proxy
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ const openRouterModelsURL = "https://openrouter.ai/api/v1/models"
 
 // ListModels proxies GET /v1/models to OpenRouter.
 // Returns the list of available models in OpenAI-compatible format.
-func (h *Repo) ListModels(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) ListModels(w http.ResponseWriter, r *http.Request) {
 	apiKey, _ := h.resolveAPIKey(r)
 	if apiKey == "" {
 		types.WriteError(w, http.StatusUnauthorized, types.ErrAuthentication("API key required"))
@@ -31,7 +31,7 @@ func (h *Repo) ListModels(w http.ResponseWriter, r *http.Request) {
 
 // GetModel proxies GET /v1/models/{model} to OpenRouter.
 // Returns details for a specific model.
-func (h *Repo) GetModel(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) GetModel(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("model")
 	if modelID == "" {
 		types.WriteError(w, http.StatusBadRequest, types.ErrInvalidRequest("model ID required"))
@@ -83,7 +83,7 @@ func (h *Repo) GetModel(w http.ResponseWriter, r *http.Request) {
 }
 
 // fetchModels makes a request to the upstream models endpoint.
-func (h *Repo) fetchModels(r *http.Request, apiKey, url string) (*http.Response, error) {
+func (h *Handlers) fetchModels(r *http.Request, apiKey, url string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (h *Repo) fetchModels(r *http.Request, apiKey, url string) (*http.Response,
 }
 
 // forwardModelsResponse forwards the upstream response to the client.
-func (h *Repo) forwardModelsResponse(w http.ResponseWriter, resp *http.Response) {
+func (h *Handlers) forwardModelsResponse(w http.ResponseWriter, resp *http.Response) {
 	for k, v := range resp.Header {
 		w.Header()[k] = v
 	}

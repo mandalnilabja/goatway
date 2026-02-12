@@ -1,4 +1,4 @@
-package handler
+package infra
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// GetCachedData demonstrates the caching logic
-func (h *Repo) GetCachedData(w http.ResponseWriter, r *http.Request) {
+// GetCachedData demonstrates the caching logic.
+func (h *Handlers) GetCachedData(w http.ResponseWriter, r *http.Request) {
 	key := "heavy_computation_result"
 
 	// 1. Check Cache
