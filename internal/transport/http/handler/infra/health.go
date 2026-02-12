@@ -18,7 +18,7 @@ func (h *Handlers) RootStatus(w http.ResponseWriter, r *http.Request) {
 		"admin":   "/api/admin",
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // HealthCheck handler returns the application health status.
@@ -28,5 +28,5 @@ func (h *Handlers) HealthCheck(w http.ResponseWriter, r *http.Request) {
 		"app":    "goatway",
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }

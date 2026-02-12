@@ -65,7 +65,7 @@ func NewAPIErrorWithParam(message, errType, param string) *APIError {
 func WriteError(w http.ResponseWriter, statusCode int, err *APIError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(err)
+	_ = json.NewEncoder(w).Encode(err)
 }
 
 // Common error constructors

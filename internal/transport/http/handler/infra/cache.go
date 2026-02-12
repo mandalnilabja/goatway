@@ -16,7 +16,7 @@ func (h *Handlers) GetCachedData(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Cache Hit!")
 		w.Header().Set("X-Cache", "HIT")
 		// Since we stored it as 'any', we assert it is a string for printing
-		w.Write([]byte(fmt.Sprintf("Value from Cache: %v", value)))
+		_, _ = w.Write([]byte(fmt.Sprintf("Value from Cache: %v", value)))
 		return
 	}
 
@@ -35,5 +35,5 @@ func (h *Handlers) GetCachedData(w http.ResponseWriter, r *http.Request) {
 	h.Cache.Wait()
 
 	w.Header().Set("X-Cache", "MISS")
-	w.Write([]byte(fmt.Sprintf("Value Computed: %v", computedValue)))
+	_, _ = w.Write([]byte(fmt.Sprintf("Value Computed: %v", computedValue)))
 }
