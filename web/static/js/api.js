@@ -14,7 +14,10 @@ const API = {
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({ error: response.statusText }));
-            throw new Error(error.error || 'Request failed');
+            const errorMsg = typeof error.error === 'string'
+                ? error.error
+                : (error.message || JSON.stringify(error) || 'Request failed');
+            throw new Error(errorMsg);
         }
 
         return response.json();

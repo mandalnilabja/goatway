@@ -3,19 +3,20 @@
 
 // Router with History API
 const Router = {
+    basePath: '/web',
     routes: {
-        '/': () => Pages.dashboard(),
-        '/credentials': () => Pages.credentials(),
-        '/usage': () => Pages.usage(),
-        '/logs': () => Pages.logs(),
-        '/settings': () => Pages.settings()
+        '/web': () => Pages.dashboard(),
+        '/web/credentials': () => Pages.credentials(),
+        '/web/usage': () => Pages.usage(),
+        '/web/logs': () => Pages.logs(),
+        '/web/settings': () => Pages.settings()
     },
 
     init() {
         window.addEventListener('popstate', () => this.handleRoute());
         document.addEventListener('click', e => {
-            const link = e.target.closest('[data-link], .nav-link');
-            if (link && link.getAttribute('href')?.startsWith('/')) {
+            const link = e.target.closest('[data-link], nav a');
+            if (link && link.getAttribute('href')?.startsWith('/web')) {
                 e.preventDefault();
                 this.navigate(link.getAttribute('href'));
             }
@@ -32,21 +33,16 @@ const Router = {
         const path = window.location.pathname;
         const params = Object.fromEntries(new URLSearchParams(window.location.search));
 
-        // Update active nav link
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.toggle('active', link.getAttribute('data-route') === path);
-        });
-
         // Find and execute route handler
         const handler = this.routes[path];
         if (handler) {
             handler(params);
         } else {
             document.getElementById('app').innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">404</div>
+                <div>
+                    <div>404</div>
                     <p>Page not found</p>
-                    <a href="/" class="btn btn-primary" data-link>Go Home</a>
+                    <a href="/web" data-link>Go Home</a>
                 </div>
             `;
         }
@@ -98,7 +94,7 @@ const Charts = {
 
         const entries = Object.entries(models);
         if (!entries.length) {
-            ctx.parentElement.innerHTML = '<div class="empty-state"><p>No model data yet</p></div>';
+            ctx.parentElement.innerHTML = '<div><p>No model data yet</p></div>';
             return;
         }
 
@@ -130,7 +126,7 @@ const Charts = {
 const Modals = {
     show(content) {
         const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
+        overlay.id = 'modal-overlay';
         overlay.innerHTML = content;
         overlay.addEventListener('click', e => {
             if (e.target === overlay) this.close();
@@ -139,7 +135,7 @@ const Modals = {
     },
 
     close() {
-        document.querySelector('.modal-overlay')?.remove();
+        document.getElementById('modal-overlay')?.remove();
     },
 
     async showCredentialForm(editId = null) {
@@ -149,40 +145,40 @@ const Modals = {
             try {
                 credential = await API.getCredential(editId);
             } catch (err) {
-                alert('Error loading credential: ' + err.message);
+                alert('Error loading credential: ' + (err?.message || String(err)));
                 return;
             }
         }
 
         this.show(`
-            <div class="modal">
-                <div class="modal-header">
-                    <h3 class="modal-title">${editId ? 'Edit' : 'Add'} Credential</h3>
-                    <button class="modal-close" onclick="Modals.close()">&times;</button>
+            <div>
+                <div>
+                    <h3>${editId ? 'Edit' : 'Add'} Credential</h3>
+                    <button onclick="Modals.close()">&times;</button>
                 </div>
                 <form id="credential-form">
-                    <div class="form-group">
-                        <label class="form-label">Name</label>
-                        <input type="text" name="name" class="form-input" value="${credential.name}" required placeholder="My API Key">
+                    <div>
+                        <label>Name</label>
+                        <input type="text" name="name" value="${credential.name}" required placeholder="My API Key">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Provider</label>
-                        <select name="provider" class="form-select" required>
+                    <div>
+                        <label>Provider</label>
+                        <select name="provider" required>
                             <option value="openrouter" ${credential.provider === 'openrouter' ? 'selected' : ''}>OpenRouter</option>
                             <option value="openai" ${credential.provider === 'openai' ? 'selected' : ''}>OpenAI</option>
                             <option value="anthropic" ${credential.provider === 'anthropic' ? 'selected' : ''}>Anthropic</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">API Key</label>
-                        <input type="password" name="api_key" class="form-input" ${editId ? '' : 'required'} placeholder="${editId ? 'Leave blank to keep current' : 'sk-...'}">
+                    <div>
+                        <label>API Key</label>
+                        <input type="password" name="api_key" ${editId ? '' : 'required'} placeholder="${editId ? 'Leave blank to keep current' : 'sk-...'}">
                     </div>
-                    <div class="form-group">
+                    <div>
                         <label><input type="checkbox" name="is_default" ${credential.is_default ? 'checked' : ''}> Set as default</label>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="Modals.close()">Cancel</button>
-                        <button type="submit" class="btn btn-primary">${editId ? 'Update' : 'Create'}</button>
+                    <div>
+                        <button type="button" onclick="Modals.close()">Cancel</button>
+                        <button type="submit">${editId ? 'Update' : 'Create'}</button>
                     </div>
                 </form>
             </div>
@@ -207,7 +203,7 @@ const Modals = {
                 this.close();
                 Pages.credentials();
             } catch (err) {
-                alert('Error: ' + err.message);
+                alert('Error: ' + (err?.message || String(err)));
             }
         };
     }
@@ -221,7 +217,7 @@ const Actions = {
             await API.setDefaultCredential(id);
             Pages.credentials();
         } catch (err) {
-            alert('Error: ' + err.message);
+            alert('Error: ' + (err?.message || String(err)));
         }
     },
 
@@ -231,7 +227,7 @@ const Actions = {
             await API.deleteCredential(id);
             Pages.credentials();
         } catch (err) {
-            alert('Error: ' + err.message);
+            alert('Error: ' + (err?.message || String(err)));
         }
     },
 
@@ -243,7 +239,7 @@ const Actions = {
             await API.deleteRequestLogs(date.toISOString().split('T')[0]);
             alert('Old logs cleared successfully');
         } catch (err) {
-            alert('Error: ' + err.message);
+            alert('Error: ' + (err?.message || String(err)));
         }
     }
 };

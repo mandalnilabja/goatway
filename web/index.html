@@ -4,33 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goatway Dashboard</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <h1 class="logo">GOATWAY</h1>
-            <nav class="nav">
-                <a href="/" class="nav-link" data-route="/">Dashboard</a>
-                <a href="/credentials" class="nav-link" data-route="/credentials">Credentials</a>
-                <a href="/usage" class="nav-link" data-route="/usage">Usage</a>
-                <a href="/logs" class="nav-link" data-route="/logs">Logs</a>
-                <a href="/settings" class="nav-link" data-route="/settings">Settings</a>
+    <header>
+        <div>
+            <h1>GOATWAY</h1>
+            <nav>
+                <a href="/web" data-route="/web">Dashboard</a>
+                <a href="/web/credentials" data-route="/web/credentials">Credentials</a>
+                <a href="/web/usage" data-route="/web/usage">Usage</a>
+                <a href="/web/logs" data-route="/web/logs">Logs</a>
+                <a href="/web/settings" data-route="/web/settings">Settings</a>
             </nav>
         </div>
     </header>
 
-    <main id="app" class="main">
+    <main id="app">
         <!-- Content will be rendered here by the router -->
     </main>
 
-    <footer class="footer">
+    <footer>
         <p>Goatway - Local OpenAI-Compatible Proxy</p>
     </footer>
 
-    <script src="/static/js/api.js"></script>
-    <script src="/static/js/pages.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/web/static/js/api.js"></script>
+    <script src="/web/static/js/pages.js"></script>
+    <script src="/web/static/js/app.js"></script>
 </body>
 </html>
