@@ -108,13 +108,22 @@ make clean        # Remove build artifacts
 ### Release
 
 ```bash
+# 1. Stage and commit your changes
+git add -A
+git commit -m "your commit message"
+
+# 2. Push commits to main
+git push origin main
+
+# 3. Create and push the release tag
+make tag V=0.1.3
+```
+
+The `make tag` command validates semver format, creates an annotated tag, and pushes it to trigger the GitHub Actions release workflow.
+
+```bash
 # Test release locally (creates binaries without publishing)
 make release-snapshot
-
-# Create tagged release
-git tag v2.0.0
-git push origin v2.0.0
-# GitHub Actions will automatically create the release
 ```
 
 ## License
