@@ -74,7 +74,7 @@ homebrew_casks:
     homepage: "https://github.com/mandalnilabja/goatway"
     description: "Lightweight, streaming-safe, OpenAI-compatible HTTP proxy for LLM providers"
     caveats: |
-      If macOS shows "goatway is damaged", run:
+      If macOS shows 'goatway is damaged', run:
         xattr -dr com.apple.quarantine $(which goatway)
     hooks:
       post:
