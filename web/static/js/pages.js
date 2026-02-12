@@ -207,7 +207,7 @@ const Pages = {
                 </div>
             `;
 
-            Charts.renderUsageChart('usage-chart', daily);
+            Charts.renderUsageChart('usage-chart', daily.daily_usage || []);
             Charts.renderModelChart('model-chart', stats.models || {});
         } catch (err) {
             const msg = err?.message || String(err);
