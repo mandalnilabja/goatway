@@ -63,7 +63,7 @@ On first run, you'll be prompted to set an admin password.
 
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
-| `SERVER_ADDR` | Server bind address | `:8080` |
+| `SERVER_PORT` | Server bind address | `:8080` |
 | `ENABLE_WEB_UI` | Enable web dashboard | `true` |
 
 ## API Endpoints

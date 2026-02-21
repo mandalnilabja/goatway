@@ -5,19 +5,19 @@ import "os"
 // Config holds application configuration loaded from environment variables.
 // All LLM provider credentials are stored in the database, not environment variables.
 type Config struct {
-	// ServerAddr is the address to bind the server to (e.g., ":8080")
-	ServerAddr string
+	// ServerPort is the address to bind the server to (e.g., ":8080")
+	ServerPort string
 
 	// EnableWebUI enables the web dashboard at /web
 	EnableWebUI bool
 }
 
 // Load reads configuration from environment variables with sensible defaults.
-// Only SERVER_ADDR and ENABLE_WEB_UI are supported as environment variables.
+// Only SERVER_PORT and ENABLE_WEB_UI are supported as environment variables.
 // All other configuration (credentials, API keys) must be set via the admin API.
 func Load() *Config {
 	return &Config{
-		ServerAddr:  getEnv("SERVER_ADDR", ":8080"),
+		ServerPort:  getEnv("SERVER_PORT", ":8080"),
 		EnableWebUI: getEnvBool("ENABLE_WEB_UI", true),
 	}
 }

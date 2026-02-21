@@ -548,7 +548,7 @@ See [aes.go](../internal/storage/encryption/aes.go) for implementation.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SERVER_ADDR` | `:8080` | Server listen address |
+| `SERVER_PORT` | `:8080` | Server listen address |
 | `LOG_LEVEL` | `info` | Log level (debug, info, warn, error) |
 | `LOG_FORMAT` | `text` | Log format (text, json) |
 | `LLM_PROVIDER` | `openrouter` | Default LLM provider |
@@ -564,7 +564,7 @@ See [aes.go](../internal/storage/encryption/aes.go) for implementation.
 goatway [flags]
 
 Flags:
-  -addr string        Server address (overrides SERVER_ADDR)
+  -addr string        Server address (overrides SERVER_PORT)
   -data-dir string    Data directory (overrides GOATWAY_DATA_DIR)
   -version            Print version and exit
   -v                  Print version and exit (shorthand)

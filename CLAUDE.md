@@ -21,7 +21,7 @@ make clean        # Remove build artifacts
 
 ## Environment Variables
 
-- `SERVER_ADDR` - Server address (default: `:8080`)
+- `SERVER_PORT` - Server address (default: `:8080`)
 - `LLM_PROVIDER` - Provider to use: `openrouter` (default), future: `openai`, `azure`
 - `OPENROUTER_API_KEY` - OpenRouter API key
 
@@ -80,7 +80,9 @@ Any code touching the proxy path MUST follow these rules:
 When writing or modifying code in this repository, follow these practices:
 
 ### File Size & Organization
-- Keep all code files under 200 lines. If a file exceeds this, split it into smaller modules.
+- Target keeping all code files under 120 lines whenever possible.
+- Files may exceed 120 lines in worst-case scenarios, but can NEVER exceed 150 lines.
+- If a file approaches these limits, split it into smaller modules.
 - One file should have one clear responsibility. Avoid mixing unrelated functionality.
 
 ### Functions

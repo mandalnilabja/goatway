@@ -1,6 +1,6 @@
 # Variables
 BINARY_NAME=goatway
-MAIN_FILE=./cmd/api/main.go
+MAIN_FILE=./cmd/api
 TOOLS_DIR=./bin/tools
 DIST_DIR=./dist
 

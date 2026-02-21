@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
@@ -24,7 +21,7 @@ import (
 func main() {
 	// Parse CLI flags
 	var (
-		addr         = flag.String("addr", "", "Server address (overrides SERVER_ADDR)")
+		port         = flag.String("port", "", "Server port (overrides SERVER_PORT)")
 		showVer      = flag.Bool("version", false, "Print version and exit")
 		versionShort = flag.Bool("v", false, "Print version and exit (shorthand)")
 	)
@@ -36,9 +33,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Apply CLI flag override for address
-	if *addr != "" {
-		os.Setenv("SERVER_ADDR", *addr)
+	// Apply CLI flag override for port
+	if *port != "" {
+		os.Setenv("SERVER_PORT", *port)
 	}
 
 	// 1. Load Configuration
@@ -117,108 +114,8 @@ func main() {
 	}
 }
 
-// ensureAdminPassword prompts for admin password on first run
-func ensureAdminPassword(store storage.Storage) error {
-	hasPassword, err := store.HasAdminPassword()
-	if err != nil {
-		return fmt.Errorf("failed to check admin password: %w", err)
-	}
-
-	if hasPassword {
-		return nil
-	}
-
-	fmt.Println()
-	fmt.Println("╔════════════════════════════════════════════════════════════╗")
-	fmt.Println("║              FIRST-TIME SETUP REQUIRED                     ║")
-	fmt.Println("╚════════════════════════════════════════════════════════════╝")
-	fmt.Println()
-	fmt.Println("No admin password configured. Please set one now.")
-	fmt.Println("This password protects the Web UI and Admin API.")
-	fmt.Println()
-
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		fmt.Print("Enter admin password (alphanumeric, min 8 chars): ")
-		password, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("failed to read password: %w", err)
-		}
-		password = strings.TrimSpace(password)
-
-		if !isValidAdminPassword(password) {
-			fmt.Println("❌ Password must be alphanumeric with at least 8 characters.")
-			fmt.Println()
-			continue
-		}
-
-		fmt.Print("Confirm password: ")
-		confirm, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		confirm = strings.TrimSpace(confirm)
-
-		if password != confirm {
-			fmt.Println("❌ Passwords do not match. Please try again.")
-			fmt.Println()
-			continue
-		}
-
-		hash, err := storage.HashPassword(password, storage.DefaultArgon2Params())
-		if err != nil {
-			return fmt.Errorf("failed to hash password: %w", err)
-		}
-
-		if err := store.SetAdminPasswordHash(hash); err != nil {
-			return fmt.Errorf("failed to save password: %w", err)
-		}
-
-		fmt.Println()
-		fmt.Println("✓ Admin password saved successfully!")
-		fmt.Println()
-		return nil
-	}
-}
-
-// isValidAdminPassword validates the admin password format
-func isValidAdminPassword(password string) bool {
-	if len(password) < 8 {
-		return false
-	}
-	for _, c := range password {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-			return false
-		}
-	}
-	return true
-}
-
 func printVersion() {
 	fmt.Printf("goatway %s\n", version.Version)
 	fmt.Printf("  commit:  %s\n", version.Commit)
 	fmt.Printf("  built:   %s\n", version.BuildTime)
-}
-
-func printStartupBanner(cfg *config.Config) {
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "🐐 Goatway %s - Local OpenAI-Compatible Proxy\n", version.Version)
-	fmt.Fprintln(os.Stderr, "════════════════════════════════════════════════")
-	if cfg.EnableWebUI {
-		fmt.Fprintf(os.Stderr, "Web UI:     http://localhost%s/web\n", cfg.ServerAddr)
-	}
-	fmt.Fprintf(os.Stderr, "Proxy API:  http://localhost%s/v1/chat/completions\n", cfg.ServerAddr)
-	fmt.Fprintf(os.Stderr, "Admin API:  http://localhost%s/api/admin/\n", cfg.ServerAddr)
-	fmt.Fprintf(os.Stderr, "Data:       %s\n", config.DataDir())
-	fmt.Fprintln(os.Stderr, "════════════════════════════════════════════════")
-	fmt.Fprintf(os.Stderr, "\n")
-}
-
-func setupLogger() *slog.Logger {
-	// Use sensible defaults: info level, text format
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	})
-	return slog.New(handler)
 }
