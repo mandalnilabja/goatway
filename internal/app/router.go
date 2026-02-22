@@ -9,6 +9,7 @@ import (
 	"github.com/mandalnilabja/goatway/internal/transport/http/handler"
 	"github.com/mandalnilabja/goatway/internal/transport/http/middleware"
 	"github.com/mandalnilabja/goatway/internal/transport/http/middleware/auth"
+	"github.com/mandalnilabja/goatway/internal/transport/http/middleware/ratelimit"
 )
 
 // RouterOptions configures the HTTP router behavior.
@@ -18,6 +19,7 @@ type RouterOptions struct {
 	Storage      storage.Storage
 	APIKeyCache  *ristretto.Cache[string, *auth.CachedAPIKey]
 	SessionStore *auth.SessionStore
+	RateLimiter  *ratelimit.Limiter
 }
 
 // NewRouter creates and configures the HTTP router with all application routes.
@@ -30,22 +32,28 @@ func NewRouter(repo *handler.Repo, opts *RouterOptions) http.Handler {
 	mux.HandleFunc("GET /api/health", repo.Infra.HealthCheck)
 	mux.HandleFunc("GET /api/data", repo.Infra.GetCachedData)
 
-	// Create API key auth middleware for proxy routes (always required)
+	// Create middleware chain for proxy routes: auth → rate limit
 	apiKeyAuth := auth.APIKeyAuth(opts.Storage, opts.APIKeyCache)
+	rateLimitMw := ratelimit.Middleware(opts.RateLimiter)
 
-	// Proxy routes (require API key auth)
-	mux.Handle("POST /v1/chat/completions", apiKeyAuth(http.HandlerFunc(repo.Proxy.ChatCompletions)))
-	mux.Handle("GET /v1/models", apiKeyAuth(http.HandlerFunc(repo.Proxy.ListModels)))
-	mux.Handle("GET /v1/models/{model}", apiKeyAuth(http.HandlerFunc(repo.Proxy.GetModel)))
-	mux.Handle("POST /v1/embeddings", apiKeyAuth(http.HandlerFunc(repo.Proxy.Embeddings)))
-	mux.Handle("POST /v1/audio/speech", apiKeyAuth(http.HandlerFunc(repo.Proxy.TextToSpeech)))
-	mux.Handle("POST /v1/audio/transcriptions", apiKeyAuth(http.HandlerFunc(repo.Proxy.Transcription)))
-	mux.Handle("POST /v1/audio/translations", apiKeyAuth(http.HandlerFunc(repo.Proxy.Translation)))
-	mux.Handle("POST /v1/images/generations", apiKeyAuth(http.HandlerFunc(repo.Proxy.ImageGeneration)))
-	mux.Handle("POST /v1/images/edits", apiKeyAuth(http.HandlerFunc(repo.Proxy.ImageEdit)))
-	mux.Handle("POST /v1/images/variations", apiKeyAuth(http.HandlerFunc(repo.Proxy.ImageVariation)))
-	mux.Handle("POST /v1/completions", apiKeyAuth(http.HandlerFunc(repo.Proxy.LegacyCompletion)))
-	mux.Handle("POST /v1/moderations", apiKeyAuth(http.HandlerFunc(repo.Proxy.Moderation)))
+	// withProxy chains auth and rate limiting for proxy handlers
+	withProxy := func(h http.HandlerFunc) http.Handler {
+		return apiKeyAuth(rateLimitMw(h))
+	}
+
+	// Proxy routes (require API key auth + rate limiting)
+	mux.Handle("POST /v1/chat/completions", withProxy(repo.Proxy.ChatCompletions))
+	mux.Handle("GET /v1/models", withProxy(repo.Proxy.ListModels))
+	mux.Handle("GET /v1/models/{model}", withProxy(repo.Proxy.GetModel))
+	mux.Handle("POST /v1/embeddings", withProxy(repo.Proxy.Embeddings))
+	mux.Handle("POST /v1/audio/speech", withProxy(repo.Proxy.TextToSpeech))
+	mux.Handle("POST /v1/audio/transcriptions", withProxy(repo.Proxy.Transcription))
+	mux.Handle("POST /v1/audio/translations", withProxy(repo.Proxy.Translation))
+	mux.Handle("POST /v1/images/generations", withProxy(repo.Proxy.ImageGeneration))
+	mux.Handle("POST /v1/images/edits", withProxy(repo.Proxy.ImageEdit))
+	mux.Handle("POST /v1/images/variations", withProxy(repo.Proxy.ImageVariation))
+	mux.Handle("POST /v1/completions", withProxy(repo.Proxy.LegacyCompletion))
+	mux.Handle("POST /v1/moderations", withProxy(repo.Proxy.Moderation))
 
 	// Admin API routes (require admin auth)
 	registerAdminRoutes(mux, repo, opts)
@@ -77,8 +85,8 @@ func NewRouter(repo *handler.Repo, opts *RouterOptions) http.Handler {
 
 // registerAdminRoutes adds all admin API routes to the router.
 func registerAdminRoutes(mux *http.ServeMux, repo *handler.Repo, opts *RouterOptions) {
-	// Create admin auth middleware using stored password hash and session store
-	adminAuth := auth.AdminAuth(opts.Storage, opts.SessionStore)
+	// Create admin auth middleware using session store (session-only, no Bearer fallback)
+	adminAuth := auth.AdminAuth(opts.SessionStore)
 
 	// Helper to wrap handler with admin auth
 	withAuth := func(h http.HandlerFunc) http.Handler {

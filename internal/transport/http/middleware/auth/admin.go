@@ -4,48 +4,29 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
-
-	"github.com/mandalnilabja/goatway/internal/storage"
 )
 
-// AdminAuth middleware protects admin routes using stored password hash.
-// Accepts either a valid session cookie (for web UI) or Bearer token (for API clients).
-func AdminAuth(store storage.Storage, sessions *SessionStore) func(http.Handler) http.Handler {
+// AdminAuth middleware protects admin routes using session-based authentication only.
+// No Bearer token fallback - admin access requires login via web UI.
+func AdminAuth(sessions *SessionStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// First, check for valid session cookie (web UI auth)
-			if sessions != nil {
-				if cookie, err := r.Cookie("goatway_session"); err == nil && cookie.Value != "" {
-					if session := sessions.Get(cookie.Value); session != nil {
-						next.ServeHTTP(w, r)
-						return
-					}
-				}
-			}
-
-			// Fall back to Bearer token authentication (API clients)
-			auth := r.Header.Get("Authorization")
-			if auth == "" || !strings.HasPrefix(auth, "Bearer ") {
-				writeUnauthorized(w, "authorization required")
-				return
-			}
-			password := strings.TrimPrefix(auth, "Bearer ")
-
-			// Get stored hash and verify
-			hash, err := store.GetAdminPasswordHash()
-			if err != nil {
-				writeUnauthorized(w, "server error")
-				return
-			}
-			if hash == "" {
-				writeUnauthorized(w, "admin not configured")
+			// Session management required
+			if sessions == nil {
+				writeUnauthorized(w, "session management not configured")
 				return
 			}
 
-			valid, err := storage.VerifyPassword(password, hash)
-			if err != nil || !valid {
-				writeUnauthorized(w, "invalid credentials")
+			// Check for valid session cookie
+			cookie, err := r.Cookie("goatway_session")
+			if err != nil || cookie.Value == "" {
+				writeUnauthorized(w, "session required")
+				return
+			}
+
+			session := sessions.Get(cookie.Value)
+			if session == nil {
+				writeUnauthorized(w, "invalid or expired session")
 				return
 			}
 

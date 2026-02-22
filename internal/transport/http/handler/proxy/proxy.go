@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
@@ -10,7 +9,6 @@ import (
 	"github.com/mandalnilabja/goatway/internal/provider"
 	"github.com/mandalnilabja/goatway/internal/storage"
 	"github.com/mandalnilabja/goatway/internal/tokenizer"
-	"github.com/mandalnilabja/goatway/internal/transport/http/middleware/auth"
 	"github.com/mandalnilabja/goatway/internal/types"
 )
 
@@ -33,42 +31,20 @@ func New(prov provider.Provider, store storage.Storage, tok tokenizer.Tokenizer,
 }
 
 // resolveAPIKey extracts the upstream API key for proxying requests.
-// If a Goatway API key (gw_*) was used for auth, looks up the default credential.
-// If a non-Goatway key is in the Authorization header, uses it directly.
-// Otherwise falls back to the default credential.
+// Uses the default credential for the provider since all requests require Goatway auth.
 func (h *Handlers) resolveAPIKey(r *http.Request) (apiKey string, credentialID string) {
-	// Check if request was authenticated with a Goatway API key
-	// In that case, we need to use the default credential for upstream
-	if auth.GetAPIKey(r.Context()) != nil {
-		// Goatway key was validated by middleware, use default credential
-		if h.Storage != nil {
-			cred, err := h.Storage.GetDefaultCredential(h.Provider.Name())
-			if err == nil && cred != nil {
-				return cred.APIKey, cred.ID
-			}
-		}
+	// All requests are authenticated with Goatway API keys (gw_*)
+	// Use the default credential for the upstream provider
+	if h.Storage == nil {
 		return "", ""
 	}
 
-	// Check Authorization header for direct upstream key (non-gw_ keys)
-	authHeader := r.Header.Get("Authorization")
-	if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
-		key := strings.TrimPrefix(authHeader, "Bearer ")
-		// If it's not a Goatway key, pass it through directly
-		if !strings.HasPrefix(key, storage.APIKeyPrefix) {
-			return key, ""
-		}
+	cred, err := h.Storage.GetDefaultCredential(h.Provider.Name())
+	if err != nil || cred == nil {
+		return "", ""
 	}
 
-	// Fall back to default credential from storage
-	if h.Storage != nil {
-		cred, err := h.Storage.GetDefaultCredential(h.Provider.Name())
-		if err == nil && cred != nil {
-			return cred.APIKey, cred.ID
-		}
-	}
-
-	return "", ""
+	return cred.GetAPIKey(), cred.ID
 }
 
 // writeError writes an OpenAI-compatible error response.

@@ -8,7 +8,7 @@ import (
 	"github.com/mandalnilabja/goatway/internal/storage/models"
 )
 
-// CreateCredential stores a new credential
+// CreateCredential stores a new credential.
 func (s *Storage) CreateCredential(cred *models.Credential) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -17,7 +17,7 @@ func (s *Storage) CreateCredential(cred *models.Credential) error {
 		return ErrStorageClosed
 	}
 
-	if cred.Provider == "" || cred.Name == "" || cred.APIKey == "" {
+	if cred.Provider == "" || cred.Name == "" || len(cred.Data) == 0 {
 		return ErrInvalidInput
 	}
 
@@ -26,8 +26,8 @@ func (s *Storage) CreateCredential(cred *models.Credential) error {
 		cred.ID = generateID("cred")
 	}
 
-	// Encrypt the API key
-	encryptedKey, err := s.encryptor.Encrypt(cred.APIKey)
+	// Encrypt the credential data
+	encryptedData, err := s.encryptor.Encrypt(string(cred.Data))
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrEncryptionError, err)
 	}
@@ -48,14 +48,14 @@ func (s *Storage) CreateCredential(cred *models.Credential) error {
 	}
 
 	_, err = s.db.Exec(`
-		INSERT INTO credentials (id, provider, name, api_key, is_default, created_at, updated_at)
+		INSERT INTO credentials (id, provider, name, data, is_default, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, cred.ID, cred.Provider, cred.Name, encryptedKey, boolToInt(cred.IsDefault), cred.CreatedAt, cred.UpdatedAt)
+	`, cred.ID, cred.Provider, cred.Name, encryptedData, boolToInt(cred.IsDefault), cred.CreatedAt, cred.UpdatedAt)
 
 	return err
 }
 
-// UpdateCredential updates an existing credential
+// UpdateCredential updates an existing credential.
 func (s *Storage) UpdateCredential(cred *models.Credential) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -68,8 +68,8 @@ func (s *Storage) UpdateCredential(cred *models.Credential) error {
 		return ErrInvalidInput
 	}
 
-	// Encrypt the API key if provided
-	encryptedKey, err := s.encryptor.Encrypt(cred.APIKey)
+	// Encrypt the credential data
+	encryptedData, err := s.encryptor.Encrypt(string(cred.Data))
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrEncryptionError, err)
 	}
@@ -78,9 +78,9 @@ func (s *Storage) UpdateCredential(cred *models.Credential) error {
 
 	result, err := s.db.Exec(`
 		UPDATE credentials
-		SET provider = ?, name = ?, api_key = ?, is_default = ?, updated_at = ?
+		SET provider = ?, name = ?, data = ?, is_default = ?, updated_at = ?
 		WHERE id = ?
-	`, cred.Provider, cred.Name, encryptedKey, boolToInt(cred.IsDefault), cred.UpdatedAt, cred.ID)
+	`, cred.Provider, cred.Name, encryptedData, boolToInt(cred.IsDefault), cred.UpdatedAt, cred.ID)
 
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (s *Storage) UpdateCredential(cred *models.Credential) error {
 	return nil
 }
 
-// DeleteCredential removes a credential by ID
+// DeleteCredential removes a credential by ID.
 func (s *Storage) DeleteCredential(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -116,7 +116,7 @@ func (s *Storage) DeleteCredential(id string) error {
 	return nil
 }
 
-// SetDefaultCredential sets a credential as the default for its provider
+// SetDefaultCredential sets a credential as the default for its provider.
 func (s *Storage) SetDefaultCredential(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

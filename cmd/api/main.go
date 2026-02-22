@@ -15,6 +15,7 @@ import (
 	"github.com/mandalnilabja/goatway/internal/tokenizer"
 	"github.com/mandalnilabja/goatway/internal/transport/http/handler"
 	"github.com/mandalnilabja/goatway/internal/transport/http/middleware/auth"
+	"github.com/mandalnilabja/goatway/internal/transport/http/middleware/ratelimit"
 	"github.com/mandalnilabja/goatway/internal/version"
 )
 
@@ -81,6 +82,9 @@ func main() {
 	// 7. Initialize Session Store for Web UI
 	sessionStore := auth.NewSessionStore(24 * time.Hour) // 24 hour session TTL
 
+	// 8. Initialize Rate Limiter for API key rate limiting
+	rateLimiter := ratelimit.New()
+
 	// 8. Initialize Provider Router (routes models to appropriate providers)
 	providers := provider.NewProviders()
 	llmProvider := provider.NewRouter(providers, cfg)
@@ -89,19 +93,20 @@ func main() {
 	tok := tokenizer.New()
 
 	// 10. Initialize Handler Repository with dependencies
-	repo := handler.NewRepo(cache, llmProvider, store, tok)
+	repo := handler.NewRepo(cache, llmProvider, store, tok, apiKeyCache)
 	repo.SetSessionStore(sessionStore)
 
 	// 11. Setup Logger for request logging
 	logger := setupLogger()
 
-	// 12. Setup Router with all routes
+	// 13. Setup Router with all routes
 	routerOpts := &app.RouterOptions{
 		EnableWebUI:  cfg.EnableWebUI,
 		Logger:       logger,
 		Storage:      store,
 		APIKeyCache:  apiKeyCache,
 		SessionStore: sessionStore,
+		RateLimiter:  rateLimiter,
 	}
 	router := app.NewRouter(repo, routerOpts)
 

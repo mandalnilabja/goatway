@@ -23,10 +23,10 @@ type Repo struct {
 }
 
 // NewRepo creates a new instance of the composed handler repository.
-func NewRepo(cache *ristretto.Cache[string, any], prov provider.Provider, store storage.Storage, tok tokenizer.Tokenizer) *Repo {
+func NewRepo(cache *ristretto.Cache[string, any], prov provider.Provider, store storage.Storage, tok tokenizer.Tokenizer, apiKeyCache *ristretto.Cache[string, *auth.CachedAPIKey]) *Repo {
 	startTime := time.Now()
 	return &Repo{
-		Admin: admin.New(store, startTime),
+		Admin: admin.New(store, startTime, apiKeyCache),
 		WebUI: webui.New(store, nil), // SessionStore set later
 		Proxy: proxy.New(prov, store, tok, cache),
 		Infra: infra.New(cache, startTime),

@@ -20,9 +20,6 @@ type (
 	StatsFilter         = models.StatsFilter
 )
 
-// Re-export functions from models package
-var MaskAPIKey = models.MaskAPIKey
-
 // Re-export errors from sqlite package
 var (
 	ErrNotFound        = sqlite.ErrNotFound

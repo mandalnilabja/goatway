@@ -1,17 +1,19 @@
 package admin
 
+import "encoding/json"
+
 // CreateCredentialRequest is the request body for creating a credential.
 type CreateCredentialRequest struct {
-	Provider  string `json:"provider"`
-	Name      string `json:"name"`
-	APIKey    string `json:"api_key"`
-	IsDefault bool   `json:"is_default"`
+	Provider  string          `json:"provider"`
+	Name      string          `json:"name"`
+	Data      json.RawMessage `json:"data"` // Provider-specific credential data
+	IsDefault bool            `json:"is_default"`
 }
 
 // UpdateCredentialRequest is the request body for updating a credential.
 type UpdateCredentialRequest struct {
-	Provider  *string `json:"provider,omitempty"`
-	Name      *string `json:"name,omitempty"`
-	APIKey    *string `json:"api_key,omitempty"`
-	IsDefault *bool   `json:"is_default,omitempty"`
+	Provider  *string          `json:"provider,omitempty"`
+	Name      *string          `json:"name,omitempty"`
+	Data      *json.RawMessage `json:"data,omitempty"` // Provider-specific credential data
+	IsDefault *bool            `json:"is_default,omitempty"`
 }

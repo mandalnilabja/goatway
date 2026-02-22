@@ -58,7 +58,7 @@ func (s *Storage) createSchema() error {
 		id          TEXT PRIMARY KEY,
 		provider    TEXT NOT NULL,
 		name        TEXT NOT NULL,
-		api_key     TEXT NOT NULL,
+		data        TEXT NOT NULL,
 		is_default  INTEGER DEFAULT 0,
 		created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP

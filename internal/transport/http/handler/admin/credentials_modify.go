@@ -18,15 +18,15 @@ func (h *Handlers) CreateCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Provider == "" || req.Name == "" || req.APIKey == "" {
-		shared.WriteJSONError(w, "provider, name, and api_key are required", http.StatusBadRequest)
+	if req.Provider == "" || req.Name == "" || len(req.Data) == 0 {
+		shared.WriteJSONError(w, "provider, name, and data are required", http.StatusBadRequest)
 		return
 	}
 
 	cred := &storage.Credential{
 		Provider:  req.Provider,
 		Name:      req.Name,
-		APIKey:    req.APIKey,
+		Data:      req.Data,
 		IsDefault: req.IsDefault,
 	}
 
@@ -68,8 +68,8 @@ func (h *Handlers) UpdateCredential(w http.ResponseWriter, r *http.Request) {
 	if req.Name != nil {
 		cred.Name = *req.Name
 	}
-	if req.APIKey != nil {
-		cred.APIKey = *req.APIKey
+	if req.Data != nil {
+		cred.Data = *req.Data
 	}
 	if req.IsDefault != nil {
 		cred.IsDefault = *req.IsDefault

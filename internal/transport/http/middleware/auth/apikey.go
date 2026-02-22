@@ -20,7 +20,7 @@ type CachedAPIKey struct {
 }
 
 // APIKeyAuth middleware authenticates requests using Goatway API keys.
-// Keys starting with "gw_" are validated; other keys pass through for upstream auth.
+// Only keys starting with "gw_" are accepted; all other keys are rejected.
 func APIKeyAuth(store storage.Storage, cache *ristretto.Cache[string, *CachedAPIKey]) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -32,9 +32,9 @@ func APIKeyAuth(store storage.Storage, cache *ristretto.Cache[string, *CachedAPI
 			}
 			apiKey := strings.TrimPrefix(auth, "Bearer ")
 
-			// Skip if not a goatway key (pass upstream keys through)
+			// Reject non-goatway keys (all clients must use gw_* keys)
 			if !strings.HasPrefix(apiKey, storage.APIKeyPrefix) {
-				next.ServeHTTP(w, r)
+				writeUnauthorized(w, "only Goatway API keys (gw_*) are accepted")
 				return
 			}
 

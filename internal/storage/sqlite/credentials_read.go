@@ -2,12 +2,13 @@ package sqlite
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/mandalnilabja/goatway/internal/storage/models"
 )
 
-// GetCredential retrieves a credential by ID
+// GetCredential retrieves a credential by ID.
 func (s *Storage) GetCredential(id string) (*models.Credential, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -18,12 +19,12 @@ func (s *Storage) GetCredential(id string) (*models.Credential, error) {
 
 	var cred models.Credential
 	var isDefault int
-	var encryptedKey string
+	var encryptedData string
 
 	err := s.db.QueryRow(`
-		SELECT id, provider, name, api_key, is_default, created_at, updated_at
+		SELECT id, provider, name, data, is_default, created_at, updated_at
 		FROM credentials WHERE id = ?
-	`, id).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedKey, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
+	`, id).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -32,19 +33,19 @@ func (s *Storage) GetCredential(id string) (*models.Credential, error) {
 		return nil, err
 	}
 
-	// Decrypt the API key
-	decryptedKey, err := s.encryptor.Decrypt(encryptedKey)
+	// Decrypt the credential data
+	decryptedData, err := s.encryptor.Decrypt(encryptedData)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrEncryptionError, err)
 	}
 
-	cred.APIKey = decryptedKey
+	cred.Data = json.RawMessage(decryptedData)
 	cred.IsDefault = isDefault == 1
 
 	return &cred, nil
 }
 
-// GetDefaultCredential retrieves the default credential for a provider
+// GetDefaultCredential retrieves the default credential for a provider.
 func (s *Storage) GetDefaultCredential(provider string) (*models.Credential, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -55,12 +56,12 @@ func (s *Storage) GetDefaultCredential(provider string) (*models.Credential, err
 
 	var cred models.Credential
 	var isDefault int
-	var encryptedKey string
+	var encryptedData string
 
 	err := s.db.QueryRow(`
-		SELECT id, provider, name, api_key, is_default, created_at, updated_at
+		SELECT id, provider, name, data, is_default, created_at, updated_at
 		FROM credentials WHERE provider = ? AND is_default = 1
-	`, provider).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedKey, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
+	`, provider).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -69,19 +70,19 @@ func (s *Storage) GetDefaultCredential(provider string) (*models.Credential, err
 		return nil, err
 	}
 
-	// Decrypt the API key
-	decryptedKey, err := s.encryptor.Decrypt(encryptedKey)
+	// Decrypt the credential data
+	decryptedData, err := s.encryptor.Decrypt(encryptedData)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrEncryptionError, err)
 	}
 
-	cred.APIKey = decryptedKey
+	cred.Data = json.RawMessage(decryptedData)
 	cred.IsDefault = true
 
 	return &cred, nil
 }
 
-// ListCredentials retrieves all credentials
+// ListCredentials retrieves all credentials.
 func (s *Storage) ListCredentials() ([]*models.Credential, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -91,7 +92,7 @@ func (s *Storage) ListCredentials() ([]*models.Credential, error) {
 	}
 
 	rows, err := s.db.Query(`
-		SELECT id, provider, name, api_key, is_default, created_at, updated_at
+		SELECT id, provider, name, data, is_default, created_at, updated_at
 		FROM credentials ORDER BY created_at DESC
 	`)
 	if err != nil {
@@ -103,19 +104,19 @@ func (s *Storage) ListCredentials() ([]*models.Credential, error) {
 	for rows.Next() {
 		var cred models.Credential
 		var isDefault int
-		var encryptedKey string
+		var encryptedData string
 
-		err := rows.Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedKey, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
+		err := rows.Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
 
-		decryptedKey, err := s.encryptor.Decrypt(encryptedKey)
+		decryptedData, err := s.encryptor.Decrypt(encryptedData)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrEncryptionError, err)
 		}
 
-		cred.APIKey = decryptedKey
+		cred.Data = json.RawMessage(decryptedData)
 		cred.IsDefault = isDefault == 1
 		credentials = append(credentials, &cred)
 	}
