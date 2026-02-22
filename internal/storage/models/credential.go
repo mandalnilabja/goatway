@@ -10,9 +10,9 @@ import (
 // Data contains provider-specific credential fields as JSON.
 type Credential struct {
 	ID        string          `json:"id"`
-	Provider  string          `json:"provider"`   // openrouter, openai, anthropic, azure
-	Name      string          `json:"name"`       // User-friendly name
-	Data      json.RawMessage `json:"data"`       // Provider-specific credential data (encrypted at rest)
+	Provider  string          `json:"provider"` // openrouter, openai, anthropic, azure
+	Name      string          `json:"name"`     // User-friendly name
+	Data      json.RawMessage `json:"data"`     // Provider-specific credential data (encrypted at rest)
 	IsDefault bool            `json:"is_default"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`

@@ -98,10 +98,10 @@ type CompletionResponse struct {
 
 // CompletionChoice represents a single completion choice.
 type CompletionChoice struct {
-	Text         string            `json:"text"`
-	Index        int               `json:"index"`
+	Text         string              `json:"text"`
+	Index        int                 `json:"index"`
 	Logprobs     *CompletionLogprobs `json:"logprobs,omitempty"`
-	FinishReason string            `json:"finish_reason"`
+	FinishReason string              `json:"finish_reason"`
 }
 
 // CompletionLogprobs contains log probability information.
@@ -131,8 +131,8 @@ type CompletionStreamChunk struct {
 
 // CompletionStreamChoice represents a streaming choice.
 type CompletionStreamChoice struct {
-	Text         string          `json:"text"`
-	Index        int             `json:"index"`
+	Text         string              `json:"text"`
+	Index        int                 `json:"index"`
 	Logprobs     *CompletionLogprobs `json:"logprobs,omitempty"`
-	FinishReason *string         `json:"finish_reason,omitempty"`
+	FinishReason *string             `json:"finish_reason,omitempty"`
 }

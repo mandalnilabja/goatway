@@ -48,42 +48,42 @@ type ModerationResponse struct {
 
 // ModerationResult represents a single moderation result.
 type ModerationResult struct {
-	Flagged        bool                        `json:"flagged"`
-	Categories     ModerationCategories        `json:"categories"`
-	CategoryScores ModerationCategoryScores    `json:"category_scores"`
-	CategoryAppliedInputTypes map[string][]string `json:"category_applied_input_types,omitempty"`
+	Flagged                   bool                     `json:"flagged"`
+	Categories                ModerationCategories     `json:"categories"`
+	CategoryScores            ModerationCategoryScores `json:"category_scores"`
+	CategoryAppliedInputTypes map[string][]string      `json:"category_applied_input_types,omitempty"`
 }
 
 // ModerationCategories contains boolean flags for each category.
 type ModerationCategories struct {
-	Sexual                 bool `json:"sexual"`
-	Hate                   bool `json:"hate"`
-	Harassment             bool `json:"harassment"`
-	SelfHarm               bool `json:"self-harm"`
-	SexualMinors           bool `json:"sexual/minors"`
-	HateThreatening        bool `json:"hate/threatening"`
-	ViolenceGraphic        bool `json:"violence/graphic"`
-	SelfHarmIntent         bool `json:"self-harm/intent"`
-	SelfHarmInstructions   bool `json:"self-harm/instructions"`
-	HarassmentThreatening  bool `json:"harassment/threatening"`
-	Violence               bool `json:"violence"`
-	Illicit                bool `json:"illicit,omitempty"`
-	IllicitViolent         bool `json:"illicit/violent,omitempty"`
+	Sexual                bool `json:"sexual"`
+	Hate                  bool `json:"hate"`
+	Harassment            bool `json:"harassment"`
+	SelfHarm              bool `json:"self-harm"`
+	SexualMinors          bool `json:"sexual/minors"`
+	HateThreatening       bool `json:"hate/threatening"`
+	ViolenceGraphic       bool `json:"violence/graphic"`
+	SelfHarmIntent        bool `json:"self-harm/intent"`
+	SelfHarmInstructions  bool `json:"self-harm/instructions"`
+	HarassmentThreatening bool `json:"harassment/threatening"`
+	Violence              bool `json:"violence"`
+	Illicit               bool `json:"illicit,omitempty"`
+	IllicitViolent        bool `json:"illicit/violent,omitempty"`
 }
 
 // ModerationCategoryScores contains confidence scores for each category.
 type ModerationCategoryScores struct {
-	Sexual                 float64 `json:"sexual"`
-	Hate                   float64 `json:"hate"`
-	Harassment             float64 `json:"harassment"`
-	SelfHarm               float64 `json:"self-harm"`
-	SexualMinors           float64 `json:"sexual/minors"`
-	HateThreatening        float64 `json:"hate/threatening"`
-	ViolenceGraphic        float64 `json:"violence/graphic"`
-	SelfHarmIntent         float64 `json:"self-harm/intent"`
-	SelfHarmInstructions   float64 `json:"self-harm/instructions"`
-	HarassmentThreatening  float64 `json:"harassment/threatening"`
-	Violence               float64 `json:"violence"`
-	Illicit                float64 `json:"illicit,omitempty"`
-	IllicitViolent         float64 `json:"illicit/violent,omitempty"`
+	Sexual                float64 `json:"sexual"`
+	Hate                  float64 `json:"hate"`
+	Harassment            float64 `json:"harassment"`
+	SelfHarm              float64 `json:"self-harm"`
+	SexualMinors          float64 `json:"sexual/minors"`
+	HateThreatening       float64 `json:"hate/threatening"`
+	ViolenceGraphic       float64 `json:"violence/graphic"`
+	SelfHarmIntent        float64 `json:"self-harm/intent"`
+	SelfHarmInstructions  float64 `json:"self-harm/instructions"`
+	HarassmentThreatening float64 `json:"harassment/threatening"`
+	Violence              float64 `json:"violence"`
+	Illicit               float64 `json:"illicit,omitempty"`
+	IllicitViolent        float64 `json:"illicit/violent,omitempty"`
 }
