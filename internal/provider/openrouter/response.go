@@ -5,12 +5,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/mandalnilabja/goatway/internal/provider"
 	"github.com/mandalnilabja/goatway/internal/types"
 )
 
 // handleStreamingResponse processes SSE streaming responses.
-func handleStreamingResponse(w http.ResponseWriter, resp *http.Response, result *provider.ProxyResult) (*provider.ProxyResult, error) {
+func handleStreamingResponse(w http.ResponseWriter, resp *http.Response, result *types.ProxyResult) (*types.ProxyResult, error) {
 	// Copy headers
 	for k, v := range resp.Header {
 		w.Header()[k] = v
@@ -54,7 +53,7 @@ func handleStreamingResponse(w http.ResponseWriter, resp *http.Response, result 
 }
 
 // handleJSONResponse processes non-streaming JSON responses.
-func handleJSONResponse(w http.ResponseWriter, resp *http.Response, result *provider.ProxyResult) (*provider.ProxyResult, error) {
+func handleJSONResponse(w http.ResponseWriter, resp *http.Response, result *types.ProxyResult) (*types.ProxyResult, error) {
 	// Read full response for parsing
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -90,7 +89,7 @@ func handleJSONResponse(w http.ResponseWriter, resp *http.Response, result *prov
 }
 
 // handleErrorResponse forwards error responses and extracts error info.
-func handleErrorResponse(w http.ResponseWriter, resp *http.Response, result *provider.ProxyResult) (*provider.ProxyResult, error) {
+func handleErrorResponse(w http.ResponseWriter, resp *http.Response, result *types.ProxyResult) (*types.ProxyResult, error) {
 	body, _ := io.ReadAll(resp.Body)
 
 	// Try to extract error message

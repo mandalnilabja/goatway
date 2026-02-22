@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mandalnilabja/goatway/internal/provider"
+	"github.com/mandalnilabja/goatway/internal/types"
 )
 
 // Provider implements the provider.Provider interface for OpenRouter.
@@ -40,9 +40,9 @@ func (p *Provider) PrepareRequest(ctx context.Context, req *http.Request) error 
 
 // ProxyRequest handles the proxy to OpenRouter with result tracking.
 // CRITICAL: Maintains streaming semantics with no buffering.
-func (p *Provider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *http.Request, opts *provider.ProxyOptions) (*provider.ProxyResult, error) {
+func (p *Provider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *http.Request, opts *types.ProxyOptions) (*types.ProxyResult, error) {
 	startTime := time.Now()
-	result := &provider.ProxyResult{
+	result := &types.ProxyResult{
 		Model:        opts.Model,
 		PromptTokens: opts.PromptTokens,
 		IsStreaming:  opts.IsStreaming,
@@ -51,10 +51,10 @@ func (p *Provider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req 
 	// API key must be provided via options (resolved from storage)
 	apiKey := opts.APIKey
 	if apiKey == "" {
-		result.Error = provider.ErrNoAPIKey
+		result.Error = types.ErrNoAPIKey
 		result.StatusCode = http.StatusUnauthorized
 		http.Error(w, "No API key configured", http.StatusUnauthorized)
-		return result, provider.ErrNoAPIKey
+		return result, types.ErrNoAPIKey
 	}
 
 	// Determine request body source

@@ -10,7 +10,7 @@ import (
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/mandalnilabja/goatway/internal/app"
 	"github.com/mandalnilabja/goatway/internal/config"
-	"github.com/mandalnilabja/goatway/internal/provider/openrouter"
+	"github.com/mandalnilabja/goatway/internal/provider"
 	"github.com/mandalnilabja/goatway/internal/storage"
 	"github.com/mandalnilabja/goatway/internal/tokenizer"
 	"github.com/mandalnilabja/goatway/internal/transport/http/handler"
@@ -81,8 +81,9 @@ func main() {
 	// 7. Initialize Session Store for Web UI
 	sessionStore := auth.NewSessionStore(24 * time.Hour) // 24 hour session TTL
 
-	// 8. Initialize Provider (API key resolved per-request from storage)
-	llmProvider := openrouter.New()
+	// 8. Initialize Provider Router (routes models to appropriate providers)
+	providers := provider.NewProviders()
+	llmProvider := provider.NewRouter(providers, cfg)
 
 	// 9. Initialize Tokenizer for token counting
 	tok := tokenizer.New()
