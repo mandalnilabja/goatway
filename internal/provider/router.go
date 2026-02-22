@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/mandalnilabja/goatway/internal/config"
+	"github.com/mandalnilabja/goatway/internal/storage"
 	"github.com/mandalnilabja/goatway/internal/types"
 )
 
@@ -21,17 +23,19 @@ type resolvedRoute struct {
 // Router routes requests to the appropriate provider based on model aliases.
 // It implements the types.Provider interface.
 type Router struct {
-	providers map[string]types.Provider
-	slugMap   map[string]*resolvedRoute // Pre-resolved for O(1) lookup
-	default_  *config.DefaultRoute
+	providers    map[string]types.Provider
+	slugMap      map[string]*resolvedRoute // Pre-resolved for O(1) lookup
+	default_     *config.DefaultRoute
+	credResolver *CredentialResolver
 }
 
-// NewRouter creates a Router with pre-resolved model aliases.
-func NewRouter(providers map[string]types.Provider, cfg *config.Config) *Router {
+// NewRouter creates a Router with pre-resolved model aliases and credential resolution.
+func NewRouter(providers map[string]types.Provider, cfg *config.Config, store storage.Storage) *Router {
 	r := &Router{
-		providers: providers,
-		slugMap:   make(map[string]*resolvedRoute),
-		default_:  cfg.Default,
+		providers:    providers,
+		slugMap:      make(map[string]*resolvedRoute),
+		default_:     cfg.Default,
+		credResolver: NewCredentialResolver(store, 5*time.Minute),
 	}
 
 	// Build slug map at startup (not per-request)
@@ -61,7 +65,7 @@ func (r *Router) PrepareRequest(ctx context.Context, req *http.Request) error {
 	return nil
 }
 
-// ProxyRequest resolves the model and delegates to the appropriate provider.
+// ProxyRequest resolves the model and credentials, then delegates to the appropriate provider.
 func (r *Router) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *http.Request, opts *types.ProxyOptions) (*types.ProxyResult, error) {
 	resolved, err := r.resolveModel(opts.Model)
 	if err != nil {
@@ -73,7 +77,19 @@ func (r *Router) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *h
 		}, err
 	}
 
-	// Update model to the resolved name and delegate
+	// Resolve credential for the target provider
+	cred, err := r.credResolver.Resolve(resolved.provider.Name())
+	if err != nil {
+		http.Error(w, "No credential configured for provider: "+resolved.provider.Name(), http.StatusUnauthorized)
+		return &types.ProxyResult{
+			Model:      opts.Model,
+			StatusCode: http.StatusUnauthorized,
+			Error:      err,
+		}, err
+	}
+
+	// Set credential and model, then delegate
+	opts.Credential = cred
 	opts.Model = resolved.model
 	return resolved.provider.ProxyRequest(ctx, w, req, opts)
 }
@@ -96,4 +112,9 @@ func (r *Router) resolveModel(slug string) (*resolvedRoute, error) {
 	}
 
 	return nil, ErrModelNotFound
+}
+
+// CredentialResolver returns the credential resolver for cache invalidation.
+func (r *Router) CredentialResolver() *CredentialResolver {
+	return r.credResolver
 }

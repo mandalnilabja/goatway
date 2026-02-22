@@ -47,16 +47,8 @@ func (h *Handlers) TextToSpeech(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve API key
-	apiKey, credID := h.resolveAPIKey(r)
-	if apiKey == "" {
-		h.writeError(w, "No API key provided.", http.StatusUnauthorized)
-		return
-	}
-
-	// Build proxy options
+	// Build proxy options (credential resolved by Router)
 	opts := &provider.ProxyOptions{
-		APIKey:      apiKey,
 		RequestID:   requestID,
 		Model:       req.Model,
 		IsStreaming: false,
@@ -67,5 +59,5 @@ func (h *Handlers) TextToSpeech(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logSimpleRequest(requestID, credID, req.Model, result, startTime)
+	go h.logSimpleRequest(requestID, opts, req.Model, result, startTime)
 }

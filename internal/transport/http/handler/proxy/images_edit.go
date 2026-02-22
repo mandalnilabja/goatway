@@ -41,16 +41,8 @@ func (h *Handlers) ImageEdit(w http.ResponseWriter, r *http.Request) {
 		model = "dall-e-2"
 	}
 
-	// Resolve API key
-	apiKey, credID := h.resolveAPIKey(r)
-	if apiKey == "" {
-		h.writeError(w, "No API key provided.", http.StatusUnauthorized)
-		return
-	}
-
-	// Build proxy options
+	// Build proxy options (credential resolved by Router)
 	opts := &provider.ProxyOptions{
-		APIKey:      apiKey,
 		RequestID:   requestID,
 		Model:       model,
 		IsStreaming: false,
@@ -61,7 +53,7 @@ func (h *Handlers) ImageEdit(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logSimpleRequest(requestID, credID, model, result, startTime)
+	go h.logSimpleRequest(requestID, opts, model, result, startTime)
 }
 
 // ImageVariation handles POST /v1/images/variations requests.
@@ -89,16 +81,8 @@ func (h *Handlers) ImageVariation(w http.ResponseWriter, r *http.Request) {
 		model = "dall-e-2"
 	}
 
-	// Resolve API key
-	apiKey, credID := h.resolveAPIKey(r)
-	if apiKey == "" {
-		h.writeError(w, "No API key provided.", http.StatusUnauthorized)
-		return
-	}
-
-	// Build proxy options
+	// Build proxy options (credential resolved by Router)
 	opts := &provider.ProxyOptions{
-		APIKey:      apiKey,
 		RequestID:   requestID,
 		Model:       model,
 		IsStreaming: false,
@@ -109,5 +93,5 @@ func (h *Handlers) ImageVariation(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logSimpleRequest(requestID, credID, model, result, startTime)
+	go h.logSimpleRequest(requestID, opts, model, result, startTime)
 }

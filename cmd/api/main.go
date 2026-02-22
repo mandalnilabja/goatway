@@ -87,7 +87,7 @@ func main() {
 
 	// 8. Initialize Provider Router (routes models to appropriate providers)
 	providers := provider.NewProviders()
-	llmProvider := provider.NewRouter(providers, cfg)
+	llmProvider := provider.NewRouter(providers, cfg, store)
 
 	// 9. Initialize Tokenizer for token counting
 	tok := tokenizer.New()
@@ -95,6 +95,7 @@ func main() {
 	// 10. Initialize Handler Repository with dependencies
 	repo := handler.NewRepo(cache, llmProvider, store, tok, apiKeyCache)
 	repo.SetSessionStore(sessionStore)
+	repo.SetCredentialResolver(llmProvider.CredentialResolver())
 
 	// 11. Setup Logger for request logging
 	logger := setupLogger()

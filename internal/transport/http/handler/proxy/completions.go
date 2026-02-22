@@ -44,16 +44,8 @@ func (h *Handlers) LegacyCompletion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve API key
-	apiKey, credID := h.resolveAPIKey(r)
-	if apiKey == "" {
-		h.writeError(w, "No API key provided.", http.StatusUnauthorized)
-		return
-	}
-
-	// Build proxy options
+	// Build proxy options (credential resolved by Router)
 	opts := &provider.ProxyOptions{
-		APIKey:      apiKey,
 		RequestID:   requestID,
 		Model:       req.Model,
 		IsStreaming: req.Stream,
@@ -64,13 +56,18 @@ func (h *Handlers) LegacyCompletion(w http.ResponseWriter, r *http.Request) {
 	result, _ := h.Provider.ProxyRequest(r.Context(), w, r, opts)
 
 	// Log asynchronously
-	go h.logCompletionRequest(requestID, credID, result, startTime)
+	go h.logCompletionRequest(requestID, opts, result, startTime)
 }
 
 // logCompletionRequest logs a completion request to storage.
-func (h *Handlers) logCompletionRequest(requestID, credentialID string, result *provider.ProxyResult, startTime time.Time) {
+func (h *Handlers) logCompletionRequest(requestID string, opts *provider.ProxyOptions, result *provider.ProxyResult, startTime time.Time) {
 	if h.Storage == nil || result == nil {
 		return
+	}
+
+	credentialID := ""
+	if opts.Credential != nil {
+		credentialID = opts.Credential.ID
 	}
 
 	duration := time.Since(startTime)

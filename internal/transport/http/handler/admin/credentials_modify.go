@@ -35,6 +35,9 @@ func (h *Handlers) CreateCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Invalidate credential cache for this provider
+	h.InvalidateCredentialCache(cred.Provider)
+
 	shared.WriteJSON(w, cred.ToPreview(), http.StatusCreated)
 }
 
@@ -81,6 +84,9 @@ func (h *Handlers) UpdateCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Invalidate credential cache for this provider
+	h.InvalidateCredentialCache(cred.Provider)
+
 	shared.WriteJSON(w, cred.ToPreview(), http.StatusOK)
 }
 
@@ -92,13 +98,24 @@ func (h *Handlers) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Storage.DeleteCredential(id); err == storage.ErrNotFound {
+	// Get credential first to know provider for cache invalidation
+	cred, err := h.Storage.GetCredential(id)
+	if err == storage.ErrNotFound {
 		shared.WriteJSONError(w, "Credential not found", http.StatusNotFound)
 		return
-	} else if err != nil {
+	}
+	if err != nil {
+		shared.WriteJSONError(w, "Failed to get credential: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.Storage.DeleteCredential(id); err != nil {
 		shared.WriteJSONError(w, "Failed to delete credential: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Invalidate credential cache for this provider
+	h.InvalidateCredentialCache(cred.Provider)
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -124,5 +141,11 @@ func (h *Handlers) SetDefaultCredential(w http.ResponseWriter, r *http.Request) 
 	}
 
 	cred, _ := h.Storage.GetCredential(id)
+
+	// Invalidate credential cache for this provider
+	if cred != nil {
+		h.InvalidateCredentialCache(cred.Provider)
+	}
+
 	shared.WriteJSON(w, cred.ToPreview(), http.StatusOK)
 }

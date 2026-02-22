@@ -36,13 +36,6 @@ func (h *Handlers) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve API key from Authorization header or default credential
-	apiKey, credID := h.resolveAPIKey(r)
-	if apiKey == "" {
-		h.writeError(w, "No API key provided. Set Authorization header or configure default credential.", http.StatusUnauthorized)
-		return
-	}
-
 	// Start token counting in background goroutine (non-blocking)
 	// This allows the proxy request to start immediately without waiting for token counting
 	tokensChan := make(chan int, 1)
@@ -55,9 +48,8 @@ func (h *Handlers) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Build proxy options (prompt tokens will be collected after proxy completes)
+	// Build proxy options (credential resolved by Router)
 	opts := &provider.ProxyOptions{
-		APIKey:       apiKey,
 		RequestID:    requestID,
 		PromptTokens: 0, // Will be populated from upstream response or background count
 		Model:        req.Model,
@@ -80,14 +72,20 @@ func (h *Handlers) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		// Token counting took too long, proceed with 0 (upstream may provide it)
 	}
 
-	// Log the request asynchronously
-	go h.logChatRequest(requestID, credID, result, promptTokens)
+	// Log the request asynchronously (credential ID from opts set by Router)
+	go h.logChatRequest(requestID, opts, result, promptTokens)
 }
 
 // logChatRequest logs the proxy request to storage asynchronously.
-func (h *Handlers) logChatRequest(requestID, credentialID string, result *provider.ProxyResult, promptTokens int) {
+func (h *Handlers) logChatRequest(requestID string, opts *provider.ProxyOptions, result *provider.ProxyResult, promptTokens int) {
 	if h.Storage == nil || result == nil {
 		return
+	}
+
+	// Get credential ID from opts (set by Router)
+	credentialID := ""
+	if opts.Credential != nil {
+		credentialID = opts.Credential.ID
 	}
 
 	// Use upstream token counts if available, otherwise use pre-calculated

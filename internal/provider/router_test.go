@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mandalnilabja/goatway/internal/config"
+	"github.com/mandalnilabja/goatway/internal/storage/models"
 	"github.com/mandalnilabja/goatway/internal/types"
 )
 
@@ -16,14 +17,52 @@ type mockProvider struct {
 	lastModel string
 }
 
-func (m *mockProvider) Name() string                                         { return m.name }
-func (m *mockProvider) BaseURL() string                                      { return "https://mock.test" }
+func (m *mockProvider) Name() string                                               { return m.name }
+func (m *mockProvider) BaseURL() string                                            { return "https://mock.test" }
 func (m *mockProvider) PrepareRequest(ctx context.Context, req *http.Request) error { return nil }
 func (m *mockProvider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *http.Request, opts *types.ProxyOptions) (*types.ProxyResult, error) {
 	m.lastModel = opts.Model
 	w.WriteHeader(http.StatusOK)
 	return &types.ProxyResult{Model: opts.Model, StatusCode: http.StatusOK}, nil
 }
+
+// mockStorage implements storage.Storage for tests.
+type mockStorage struct{}
+
+func (m *mockStorage) GetDefaultCredential(provider string) (*models.Credential, error) {
+	return &models.Credential{ID: "test-cred", Provider: provider}, nil
+}
+
+// Stub implementations for storage.Storage interface
+func (m *mockStorage) CreateCredential(cred *models.Credential) error            { return nil }
+func (m *mockStorage) GetCredential(id string) (*models.Credential, error)       { return nil, nil }
+func (m *mockStorage) ListCredentials() ([]*models.Credential, error)            { return nil, nil }
+func (m *mockStorage) UpdateCredential(cred *models.Credential) error            { return nil }
+func (m *mockStorage) DeleteCredential(id string) error                          { return nil }
+func (m *mockStorage) SetDefaultCredential(id string) error                      { return nil }
+func (m *mockStorage) LogRequest(log *models.RequestLog) error                   { return nil }
+func (m *mockStorage) GetRequestLogs(f models.LogFilter) ([]*models.RequestLog, error) {
+	return nil, nil
+}
+func (m *mockStorage) DeleteRequestLogs(olderThan string) (int64, error)         { return 0, nil }
+func (m *mockStorage) GetUsageStats(f models.StatsFilter) (*models.UsageStats, error) {
+	return nil, nil
+}
+func (m *mockStorage) GetDailyUsage(start, end string) ([]*models.DailyUsage, error) { return nil, nil }
+func (m *mockStorage) UpdateDailyUsage(usage *models.DailyUsage) error           { return nil }
+func (m *mockStorage) CreateAPIKey(key *models.ClientAPIKey) error               { return nil }
+func (m *mockStorage) GetAPIKey(id string) (*models.ClientAPIKey, error)         { return nil, nil }
+func (m *mockStorage) GetAPIKeyByPrefix(prefix string) ([]*models.ClientAPIKey, error) {
+	return nil, nil
+}
+func (m *mockStorage) ListAPIKeys() ([]*models.ClientAPIKey, error)              { return nil, nil }
+func (m *mockStorage) UpdateAPIKey(key *models.ClientAPIKey) error               { return nil }
+func (m *mockStorage) DeleteAPIKey(id string) error                              { return nil }
+func (m *mockStorage) UpdateAPIKeyLastUsed(id string) error                      { return nil }
+func (m *mockStorage) GetAdminPasswordHash() (string, error)                     { return "", nil }
+func (m *mockStorage) SetAdminPasswordHash(hash string) error                    { return nil }
+func (m *mockStorage) HasAdminPassword() (bool, error)                           { return false, nil }
+func (m *mockStorage) Close() error                                              { return nil }
 
 func TestRouter_ResolveKnownAlias(t *testing.T) {
 	mock := &mockProvider{name: "openrouter"}
@@ -35,7 +74,7 @@ func TestRouter_ResolveKnownAlias(t *testing.T) {
 		},
 	}
 
-	router := NewRouter(providers, cfg)
+	router := NewRouter(providers, cfg, &mockStorage{})
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
@@ -62,7 +101,7 @@ func TestRouter_ResolveWithDefault(t *testing.T) {
 		Models:  []config.ModelAlias{},
 	}
 
-	router := NewRouter(providers, cfg)
+	router := NewRouter(providers, cfg, &mockStorage{})
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
@@ -87,7 +126,7 @@ func TestRouter_ResolveWithoutDefault(t *testing.T) {
 		Models:  []config.ModelAlias{},
 	}
 
-	router := NewRouter(providers, cfg)
+	router := NewRouter(providers, cfg, &mockStorage{})
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)

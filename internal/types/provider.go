@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/mandalnilabja/goatway/internal/storage/models"
 )
 
 // ErrNoAPIKey is returned when no API key is configured for a request
@@ -30,8 +32,8 @@ type Provider interface {
 
 // ProxyOptions contains options for proxying a request
 type ProxyOptions struct {
-	// APIKey to use for this request (from credential or header)
-	APIKey string
+	// Credential from storage for the target provider
+	Credential *models.Credential
 
 	// RequestID for tracing
 	RequestID string

@@ -37,3 +37,8 @@ func NewRepo(cache *ristretto.Cache[string, any], prov provider.Provider, store 
 func (r *Repo) SetSessionStore(store *auth.SessionStore) {
 	r.WebUI.SetSessionStore(store)
 }
+
+// SetCredentialResolver sets the credential resolver for admin cache invalidation.
+func (r *Repo) SetCredentialResolver(cr *provider.CredentialResolver) {
+	r.Admin.SetCredentialResolver(cr)
+}

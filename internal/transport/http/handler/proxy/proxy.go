@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/dgraph-io/ristretto/v2"
@@ -9,7 +8,6 @@ import (
 	"github.com/mandalnilabja/goatway/internal/provider"
 	"github.com/mandalnilabja/goatway/internal/storage"
 	"github.com/mandalnilabja/goatway/internal/tokenizer"
-	"github.com/mandalnilabja/goatway/internal/types"
 )
 
 // Handlers holds the dependencies for proxy HTTP handlers.
@@ -28,28 +26,6 @@ func New(prov provider.Provider, store storage.Storage, tok tokenizer.Tokenizer,
 		Tokenizer: tok,
 		Cache:     cache,
 	}
-}
-
-// resolveAPIKey extracts the upstream API key for proxying requests.
-// Uses the default credential for the provider since all requests require Goatway auth.
-func (h *Handlers) resolveAPIKey(r *http.Request) (apiKey string, credentialID string) {
-	// All requests are authenticated with Goatway API keys (gw_*)
-	// Use the default credential for the upstream provider
-	if h.Storage == nil {
-		return "", ""
-	}
-
-	cred, err := h.Storage.GetDefaultCredential(h.Provider.Name())
-	if err != nil || cred == nil {
-		return "", ""
-	}
-
-	return cred.GetAPIKey(), cred.ID
-}
-
-// writeError writes an OpenAI-compatible error response.
-func (h *Handlers) writeError(w http.ResponseWriter, message string, status int) {
-	types.WriteError(w, status, types.ErrAuthentication(message))
 }
 
 // updateDailyUsage updates the daily usage aggregate for a request.
@@ -94,9 +70,14 @@ func (h *Handlers) logRequestBase(requestID, credentialID, model string, result 
 }
 
 // logSimpleRequest logs a simple request (no token counts) to storage.
-func (h *Handlers) logSimpleRequest(requestID, credentialID, model string, result *provider.ProxyResult, startTime time.Time) {
+func (h *Handlers) logSimpleRequest(requestID string, opts *provider.ProxyOptions, model string, result *provider.ProxyResult, startTime time.Time) {
 	if h.Storage == nil || result == nil {
 		return
+	}
+
+	credentialID := ""
+	if opts.Credential != nil {
+		credentialID = opts.Credential.ID
 	}
 
 	log := h.logRequestBase(requestID, credentialID, model, result, startTime)

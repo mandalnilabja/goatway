@@ -48,14 +48,14 @@ func (p *Provider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req 
 		IsStreaming:  opts.IsStreaming,
 	}
 
-	// API key must be provided via options (resolved from storage)
-	apiKey := opts.APIKey
-	if apiKey == "" {
+	// API key must be provided via credential (resolved by Router)
+	if opts.Credential == nil {
 		result.Error = types.ErrNoAPIKey
 		result.StatusCode = http.StatusUnauthorized
-		http.Error(w, "No API key configured", http.StatusUnauthorized)
+		http.Error(w, "No credential configured", http.StatusUnauthorized)
 		return result, types.ErrNoAPIKey
 	}
+	apiKey := opts.Credential.GetAPIKey()
 
 	// Determine request body source
 	var body io.Reader = req.Body
