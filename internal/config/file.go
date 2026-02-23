@@ -73,18 +73,20 @@ func EnsureConfigFile() error {
 # Optional default routing for unaliased models
 # [default]
 # provider = "openrouter"
-# model = "openai/gpt-4o"
+# credential_name = "my-openrouter-key"  # Name of credential to use
 
 # Model aliases - map short names to provider/model combinations
 # [[models]]
 # slug = "gpt4"
 # provider = "openrouter"
 # model = "openai/gpt-4o"
+# credential_name = "my-openrouter-key"  # Required: name of credential to use
 
 # [[models]]
 # slug = "claude"
 # provider = "openrouter"
 # model = "anthropic/claude-3.5-sonnet"
+# credential_name = "my-openrouter-key"
 `
 
 	return os.WriteFile(path, []byte(defaultConfig), 0644)
