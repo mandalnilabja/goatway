@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,9 +28,18 @@ func (m *mockProvider) ProxyRequest(ctx context.Context, w http.ResponseWriter, 
 }
 
 // mockStorage implements storage.Storage for tests.
-type mockStorage struct{}
+type mockStorage struct {
+	credentials map[string]*models.Credential // nil means return all, empty means return none
+}
 
 func (m *mockStorage) GetCredentialByName(name string) (*models.Credential, error) {
+	if m.credentials != nil {
+		if cred, ok := m.credentials[name]; ok {
+			return cred, nil
+		}
+		return nil, errors.New("credential not found")
+	}
+	// Default behavior: return a credential for any name
 	return &models.Credential{ID: "test-cred", Name: name, Provider: "openrouter"}, nil
 }
 
@@ -69,7 +79,7 @@ func TestRouter_ResolveKnownAlias(t *testing.T) {
 
 	cfg := &config.Config{
 		Models: []config.ModelAlias{
-			{Slug: "gpt4", Provider: "openrouter", Model: "openai/gpt-4o"},
+			{Slug: "gpt4", Provider: "openrouter", Model: "openai/gpt-4o", CredentialName: "test-cred"},
 		},
 	}
 
@@ -96,7 +106,7 @@ func TestRouter_ResolveWithDefault(t *testing.T) {
 	providers := map[string]types.Provider{"openrouter": mock}
 
 	cfg := &config.Config{
-		Default: &config.DefaultRoute{Provider: "openrouter", Model: "openai/gpt-4o"},
+		Default: &config.DefaultRoute{Provider: "openrouter", Model: "openai/gpt-4o", CredentialName: "test-cred"},
 		Models:  []config.ModelAlias{},
 	}
 
@@ -137,5 +147,81 @@ func TestRouter_ResolveWithoutDefault(t *testing.T) {
 	}
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected status 400, got %d", w.Code)
+	}
+}
+
+func TestRouter_NoCredentialConfigured(t *testing.T) {
+	mock := &mockProvider{name: "openrouter"}
+	providers := map[string]types.Provider{"openrouter": mock}
+
+	cfg := &config.Config{
+		Models: []config.ModelAlias{
+			{Slug: "gpt4", Provider: "openrouter", Model: "openai/gpt-4o"}, // No CredentialName
+		},
+	}
+
+	router := NewRouter(providers, cfg, &mockStorage{})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	opts := &types.ProxyOptions{Model: "gpt4"}
+
+	_, err := router.ProxyRequest(context.Background(), w, req, opts)
+	if err == nil {
+		t.Error("expected error for missing credential")
+	}
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", w.Code)
+	}
+}
+
+func TestRouter_DefaultNoCredentialConfigured(t *testing.T) {
+	mock := &mockProvider{name: "openrouter"}
+	providers := map[string]types.Provider{"openrouter": mock}
+
+	cfg := &config.Config{
+		Default: &config.DefaultRoute{Provider: "openrouter"}, // No CredentialName
+		Models:  []config.ModelAlias{},
+	}
+
+	router := NewRouter(providers, cfg, &mockStorage{})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	opts := &types.ProxyOptions{Model: "unknown-model"}
+
+	_, err := router.ProxyRequest(context.Background(), w, req, opts)
+	if err == nil {
+		t.Error("expected error for missing credential")
+	}
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", w.Code)
+	}
+}
+
+func TestRouter_CredentialNotFound(t *testing.T) {
+	mock := &mockProvider{name: "openrouter"}
+	providers := map[string]types.Provider{"openrouter": mock}
+
+	cfg := &config.Config{
+		Models: []config.ModelAlias{
+			{Slug: "gpt4", Provider: "openrouter", Model: "openai/gpt-4o", CredentialName: "nonexistent"},
+		},
+	}
+
+	// Use empty credentials map so GetCredentialByName returns error
+	store := &mockStorage{credentials: map[string]*models.Credential{}}
+	router := NewRouter(providers, cfg, store)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	opts := &types.ProxyOptions{Model: "gpt4"}
+
+	_, err := router.ProxyRequest(context.Background(), w, req, opts)
+	if err == nil {
+		t.Error("expected error for credential not found")
+	}
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", w.Code)
 	}
 }

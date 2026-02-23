@@ -16,8 +16,9 @@ var ErrModelNotFound = errors.New("model not found")
 
 // resolvedRoute holds a pre-resolved provider and model for fast lookup.
 type resolvedRoute struct {
-	provider types.Provider
-	model    string
+	provider       types.Provider
+	model          string
+	credentialName string // From config alias or [default]
 }
 
 // Router routes requests to the appropriate provider based on model aliases.
@@ -42,8 +43,9 @@ func NewRouter(providers map[string]types.Provider, cfg *config.Config, store st
 	for _, alias := range cfg.Models {
 		if p, ok := providers[alias.Provider]; ok {
 			r.slugMap[alias.Slug] = &resolvedRoute{
-				provider: p,
-				model:    alias.Model,
+				provider:       p,
+				model:          alias.Model,
+				credentialName: alias.CredentialName,
 			}
 		}
 	}
@@ -77,10 +79,20 @@ func (r *Router) ProxyRequest(ctx context.Context, w http.ResponseWriter, req *h
 		}, err
 	}
 
-	// Resolve credential for the target provider
-	cred, err := r.credResolver.Resolve(resolved.provider.Name())
+	// Check if credential name is configured
+	if resolved.credentialName == "" {
+		http.Error(w, "No credential configured for model: "+opts.Model, http.StatusUnauthorized)
+		return &types.ProxyResult{
+			Model:      opts.Model,
+			StatusCode: http.StatusUnauthorized,
+			Error:      errors.New("no credential configured"),
+		}, errors.New("no credential configured")
+	}
+
+	// Resolve credential by name
+	cred, err := r.credResolver.Resolve(resolved.credentialName)
 	if err != nil {
-		http.Error(w, "No credential configured for provider: "+resolved.provider.Name(), http.StatusUnauthorized)
+		http.Error(w, "Credential not found: "+resolved.credentialName, http.StatusUnauthorized)
 		return &types.ProxyResult{
 			Model:      opts.Model,
 			StatusCode: http.StatusUnauthorized,
@@ -105,8 +117,9 @@ func (r *Router) resolveModel(slug string) (*resolvedRoute, error) {
 	if r.default_ != nil {
 		if p, ok := r.providers[r.default_.Provider]; ok {
 			return &resolvedRoute{
-				provider: p,
-				model:    slug, // Use original slug as model name
+				provider:       p,
+				model:          slug, // Use original slug as model name
+				credentialName: r.default_.CredentialName,
 			}, nil
 		}
 	}
