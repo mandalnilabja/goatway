@@ -13,7 +13,6 @@ type Credential struct {
 	Provider  string          `json:"provider"` // openrouter, openai, anthropic, azure
 	Name      string          `json:"name"`     // User-friendly name
 	Data      json.RawMessage `json:"data"`     // Provider-specific credential data (encrypted at rest)
-	IsDefault bool            `json:"is_default"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
 }
@@ -24,7 +23,6 @@ type CredentialPreview struct {
 	Provider    string          `json:"provider"`
 	Name        string          `json:"name"`
 	DataPreview json.RawMessage `json:"data_preview"` // Masked credential data
-	IsDefault   bool            `json:"is_default"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
 }
@@ -51,7 +49,6 @@ func (c *Credential) ToPreview() *CredentialPreview {
 		Provider:    c.Provider,
 		Name:        c.Name,
 		DataPreview: maskCredentialData(c.Provider, c.Data),
-		IsDefault:   c.IsDefault,
 		CreatedAt:   c.CreatedAt,
 		UpdatedAt:   c.UpdatedAt,
 	}
