@@ -17,15 +17,17 @@ type FileConfig struct {
 
 // DefaultRoute defines the fallback provider and model for unknown slugs.
 type DefaultRoute struct {
-	Provider string `toml:"provider"`
-	Model    string `toml:"model"`
+	Provider       string `toml:"provider"`
+	Model          string `toml:"model"`
+	CredentialName string `toml:"credential_name"`
 }
 
 // ModelAlias maps a short slug to a provider and model combination.
 type ModelAlias struct {
-	Slug     string `toml:"slug"`
-	Provider string `toml:"provider"`
-	Model    string `toml:"model"`
+	Slug           string `toml:"slug"`
+	Provider       string `toml:"provider"`
+	Model          string `toml:"model"`
+	CredentialName string `toml:"credential_name"`
 }
 
 // ConfigPath returns the path to the config file (~/.goatway/config.toml).
