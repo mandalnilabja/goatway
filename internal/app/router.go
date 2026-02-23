@@ -99,7 +99,6 @@ func registerAdminRoutes(mux *http.ServeMux, repo *handler.Repo, opts *RouterOpt
 	mux.Handle("GET /api/admin/credentials/{id}", withAuth(repo.Admin.GetCredential))
 	mux.Handle("PUT /api/admin/credentials/{id}", withAuth(repo.Admin.UpdateCredential))
 	mux.Handle("DELETE /api/admin/credentials/{id}", withAuth(repo.Admin.DeleteCredential))
-	mux.Handle("POST /api/admin/credentials/{id}/default", withAuth(repo.Admin.SetDefaultCredential))
 
 	// API key management
 	mux.Handle("POST /api/admin/apikeys", withAuth(repo.Admin.CreateAPIKey))

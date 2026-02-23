@@ -10,22 +10,27 @@ import (
 
 const openRouterModelsURL = "https://openrouter.ai/api/v1/models"
 
-// getDefaultAPIKey gets the API key from the default openrouter credential.
-func (h *Handlers) getDefaultAPIKey() string {
+// getOpenRouterAPIKey gets an API key from any openrouter credential.
+func (h *Handlers) getOpenRouterAPIKey() string {
 	if h.Storage == nil {
 		return ""
 	}
-	cred, err := h.Storage.GetDefaultCredential("openrouter")
-	if err != nil || cred == nil {
+	creds, err := h.Storage.ListCredentials()
+	if err != nil {
 		return ""
 	}
-	return cred.GetAPIKey()
+	for _, cred := range creds {
+		if cred.Provider == "openrouter" {
+			return cred.GetAPIKey()
+		}
+	}
+	return ""
 }
 
 // ListModels proxies GET /v1/models to OpenRouter.
 // Returns the list of available models in OpenAI-compatible format.
 func (h *Handlers) ListModels(w http.ResponseWriter, r *http.Request) {
-	apiKey := h.getDefaultAPIKey()
+	apiKey := h.getOpenRouterAPIKey()
 	if apiKey == "" {
 		types.WriteError(w, http.StatusUnauthorized, types.ErrAuthentication("No credential configured for openrouter"))
 		return
@@ -50,7 +55,7 @@ func (h *Handlers) GetModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	apiKey := h.getDefaultAPIKey()
+	apiKey := h.getOpenRouterAPIKey()
 	if apiKey == "" {
 		types.WriteError(w, http.StatusUnauthorized, types.ErrAuthentication("No credential configured for openrouter"))
 		return
@@ -69,20 +74,23 @@ func (h *Handlers) GetModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse response to find the specific model
-	body, err := io.ReadAll(resp.Body)
+	h.findAndReturnModel(w, resp.Body, modelID)
+}
+
+// findAndReturnModel parses the models list and returns a specific model.
+func (h *Handlers) findAndReturnModel(w http.ResponseWriter, body io.Reader, modelID string) {
+	data, err := io.ReadAll(body)
 	if err != nil {
 		types.WriteError(w, http.StatusBadGateway, types.ErrServer("failed to read upstream response"))
 		return
 	}
 
 	var modelsList modelsListResponse
-	if err := json.Unmarshal(body, &modelsList); err != nil {
+	if err := json.Unmarshal(data, &modelsList); err != nil {
 		types.WriteError(w, http.StatusBadGateway, types.ErrServer("failed to parse models response"))
 		return
 	}
 
-	// Find the requested model
 	for _, m := range modelsList.Data {
 		if m.ID == modelID {
 			w.Header().Set("Content-Type", "application/json")

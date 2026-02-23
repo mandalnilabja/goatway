@@ -3,7 +3,6 @@ package admin
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/mandalnilabja/goatway/internal/storage"
@@ -24,10 +23,9 @@ func (h *Handlers) CreateCredential(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cred := &storage.Credential{
-		Provider:  req.Provider,
-		Name:      req.Name,
-		Data:      req.Data,
-		IsDefault: req.IsDefault,
+		Provider: req.Provider,
+		Name:     req.Name,
+		Data:     req.Data,
 	}
 
 	if err := h.Storage.CreateCredential(cred); err != nil {
@@ -74,9 +72,6 @@ func (h *Handlers) UpdateCredential(w http.ResponseWriter, r *http.Request) {
 	if req.Data != nil {
 		cred.Data = *req.Data
 	}
-	if req.IsDefault != nil {
-		cred.IsDefault = *req.IsDefault
-	}
 	cred.UpdatedAt = time.Now()
 
 	if err := h.Storage.UpdateCredential(cred); err != nil {
@@ -118,34 +113,4 @@ func (h *Handlers) DeleteCredential(w http.ResponseWriter, r *http.Request) {
 	h.InvalidateCredentialCache(cred.Provider)
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// SetDefaultCredential handles POST /api/admin/credentials/{id}/default.
-func (h *Handlers) SetDefaultCredential(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from path like /api/admin/credentials/{id}/default
-	path := strings.TrimPrefix(r.URL.Path, "/api/admin/credentials/")
-	path = strings.TrimSuffix(path, "/default")
-	id := path
-
-	if id == "" {
-		shared.WriteJSONError(w, "Credential ID is required", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.Storage.SetDefaultCredential(id); err == storage.ErrNotFound {
-		shared.WriteJSONError(w, "Credential not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		shared.WriteJSONError(w, "Failed to set default credential: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	cred, _ := h.Storage.GetCredential(id)
-
-	// Invalidate credential cache for this provider
-	if cred != nil {
-		h.InvalidateCredentialCache(cred.Provider)
-	}
-
-	shared.WriteJSON(w, cred.ToPreview(), http.StatusOK)
 }
