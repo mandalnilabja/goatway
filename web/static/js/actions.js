@@ -2,16 +2,6 @@
 // Depends on: API, Pages, Modals, Router
 
 const Actions = {
-    async setDefault(id) {
-        if (!confirm('Set this credential as default?')) return;
-        try {
-            await API.setDefaultCredential(id);
-            Pages.credentials();
-        } catch (err) {
-            alert('Error: ' + (err?.message || String(err)));
-        }
-    },
-
     async deleteCredential(id) {
         if (!confirm('Delete this credential? This cannot be undone.')) return;
         try {

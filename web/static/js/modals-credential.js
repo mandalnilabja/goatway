@@ -21,8 +21,7 @@ Modals.buildCredentialData = function(form, isEdit) {
     const provider = form.provider.value;
     const payload = {
         name: form.name.value,
-        provider: provider,
-        is_default: form.is_default.checked
+        provider: provider
     };
 
     if (provider === 'azure') {
@@ -41,7 +40,7 @@ Modals.buildCredentialData = function(form, isEdit) {
 };
 
 Modals.showCredentialForm = async function(editId = null) {
-    let credential = { provider: 'openrouter', name: '', is_default: false };
+    let credential = { provider: 'openrouter', name: '' };
 
     if (editId) {
         try {
@@ -91,9 +90,6 @@ Modals.showCredentialForm = async function(editId = null) {
                     <div class="form-group" id="apikey-field">
                         <label>API Key</label>
                         <input type="password" name="api_key" ${editId ? '' : 'required'} placeholder="${editId ? 'Leave blank to keep current' : 'sk-...'}">
-                    </div>
-                    <div class="form-group">
-                        <label class="checkbox-label"><input type="checkbox" name="is_default" ${credential.is_default ? 'checked' : ''}> Set as default</label>
                     </div>
                     <div class="modal-footer">
                         <button type="button" onclick="Modals.close()">Cancel</button>

@@ -30,12 +30,8 @@ Pages.renderCredentialCard = function(cred) {
     return `
         <div class="item-card" data-id="${cred.id}">
             <div class="item-header">
-                <div class="item-title">
-                    ${cred.is_default ? '<span class="badge badge-default">Default</span>' : ''}
-                    ${cred.name}
-                </div>
+                <div class="item-title">${cred.name}</div>
                 <div class="btn-group">
-                    ${!cred.is_default ? `<button class="btn-sm" onclick="Actions.setDefault('${cred.id}')">Set Default</button>` : ''}
                     <button class="btn-sm" onclick="Modals.showCredentialForm('${cred.id}')">Edit</button>
                     <button class="btn-sm btn-danger" onclick="Actions.deleteCredential('${cred.id}')">Delete</button>
                 </div>

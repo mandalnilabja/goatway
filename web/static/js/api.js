@@ -54,10 +54,6 @@ const API = {
         return this.request(`/credentials/${id}`, { method: 'DELETE' });
     },
 
-    async setDefaultCredential(id) {
-        return this.request(`/credentials/${id}/default`, { method: 'POST' });
-    },
-
     // API Keys
     async listAPIKeys() {
         return this.request('/apikeys');
