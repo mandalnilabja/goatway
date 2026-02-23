@@ -3,7 +3,6 @@ package openrouter
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -57,10 +56,13 @@ func (p *Provider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req 
 	}
 	apiKey := opts.Credential.GetAPIKey()
 
-	// Determine request body source
-	var body io.Reader = req.Body
-	if opts.Body != nil {
-		body = opts.Body
+	// Read and rewrite body with resolved model name
+	body, err := rewriteModelInBody(opts.Body, req.Body, opts.Model)
+	if err != nil {
+		result.Error = err
+		result.StatusCode = http.StatusBadRequest
+		http.Error(w, "Failed to process request body", http.StatusBadRequest)
+		return result, err
 	}
 
 	// Create upstream request
