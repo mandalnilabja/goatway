@@ -47,7 +47,12 @@ func main() {
 		log.Fatal("Failed to create data directory:", err)
 	}
 
-	// 3. Initialize Storage
+	// 3. Initialize Config File (creates template on first run)
+	if err := config.EnsureConfigFile(); err != nil {
+		log.Fatal("Failed to create config file:", err)
+	}
+
+	// 4. Initialize Storage
 	store, err := storage.NewSQLiteStorage(config.DBPath())
 	if err != nil {
 		log.Fatal("Failed to initialize storage:", err)

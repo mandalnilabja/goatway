@@ -48,11 +48,6 @@ func New(dbPath string) (*Storage, error) {
 		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
 
-	if err := storage.migrateCredentials(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to migrate credentials: %w", err)
-	}
-
 	return storage, nil
 }
 
