@@ -48,6 +48,11 @@ func New(dbPath string) (*Storage, error) {
 		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
 
+	if err := storage.migrateCredentials(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to migrate credentials: %w", err)
+	}
+
 	return storage, nil
 }
 
@@ -57,9 +62,8 @@ func (s *Storage) createSchema() error {
 	CREATE TABLE IF NOT EXISTS credentials (
 		id          TEXT PRIMARY KEY,
 		provider    TEXT NOT NULL,
-		name        TEXT NOT NULL,
+		name        TEXT NOT NULL UNIQUE,
 		data        TEXT NOT NULL,
-		is_default  INTEGER DEFAULT 0,
 		created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 	);

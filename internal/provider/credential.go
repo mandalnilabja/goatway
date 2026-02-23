@@ -8,7 +8,7 @@ import (
 	"github.com/mandalnilabja/goatway/internal/storage/models"
 )
 
-// CredentialResolver resolves and caches credentials by provider name.
+// CredentialResolver resolves and caches credentials by name.
 type CredentialResolver struct {
 	storage storage.Storage
 	cache   map[string]*cachedCredential
@@ -30,25 +30,25 @@ func NewCredentialResolver(store storage.Storage, ttl time.Duration) *Credential
 	}
 }
 
-// Resolve returns the default credential for a provider (cached).
-func (r *CredentialResolver) Resolve(provider string) (*models.Credential, error) {
+// Resolve returns the credential by name (cached).
+func (r *CredentialResolver) Resolve(credentialName string) (*models.Credential, error) {
 	// Check cache first
 	r.mu.RLock()
-	if cached, ok := r.cache[provider]; ok && time.Now().Before(cached.expiresAt) {
+	if cached, ok := r.cache[credentialName]; ok && time.Now().Before(cached.expiresAt) {
 		r.mu.RUnlock()
 		return cached.credential, nil
 	}
 	r.mu.RUnlock()
 
 	// Cache miss or expired - fetch from storage
-	cred, err := r.storage.GetDefaultCredential(provider)
+	cred, err := r.storage.GetCredentialByName(credentialName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Update cache
 	r.mu.Lock()
-	r.cache[provider] = &cachedCredential{
+	r.cache[credentialName] = &cachedCredential{
 		credential: cred,
 		expiresAt:  time.Now().Add(r.ttl),
 	}
@@ -58,8 +58,8 @@ func (r *CredentialResolver) Resolve(provider string) (*models.Credential, error
 }
 
 // Invalidate removes a cached credential (call after credential update).
-func (r *CredentialResolver) Invalidate(provider string) {
+func (r *CredentialResolver) Invalidate(credentialName string) {
 	r.mu.Lock()
-	delete(r.cache, provider)
+	delete(r.cache, credentialName)
 	r.mu.Unlock()
 }

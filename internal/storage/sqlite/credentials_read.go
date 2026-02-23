@@ -18,13 +18,12 @@ func (s *Storage) GetCredential(id string) (*models.Credential, error) {
 	}
 
 	var cred models.Credential
-	var isDefault int
 	var encryptedData string
 
 	err := s.db.QueryRow(`
-		SELECT id, provider, name, data, is_default, created_at, updated_at
+		SELECT id, provider, name, data, created_at, updated_at
 		FROM credentials WHERE id = ?
-	`, id).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
+	`, id).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &cred.CreatedAt, &cred.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -40,13 +39,12 @@ func (s *Storage) GetCredential(id string) (*models.Credential, error) {
 	}
 
 	cred.Data = json.RawMessage(decryptedData)
-	cred.IsDefault = isDefault == 1
 
 	return &cred, nil
 }
 
-// GetDefaultCredential retrieves the default credential for a provider.
-func (s *Storage) GetDefaultCredential(provider string) (*models.Credential, error) {
+// GetCredentialByName retrieves a credential by its unique name.
+func (s *Storage) GetCredentialByName(name string) (*models.Credential, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -55,13 +53,12 @@ func (s *Storage) GetDefaultCredential(provider string) (*models.Credential, err
 	}
 
 	var cred models.Credential
-	var isDefault int
 	var encryptedData string
 
 	err := s.db.QueryRow(`
-		SELECT id, provider, name, data, is_default, created_at, updated_at
-		FROM credentials WHERE provider = ? AND is_default = 1
-	`, provider).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
+		SELECT id, provider, name, data, created_at, updated_at
+		FROM credentials WHERE name = ?
+	`, name).Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &cred.CreatedAt, &cred.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -77,7 +74,6 @@ func (s *Storage) GetDefaultCredential(provider string) (*models.Credential, err
 	}
 
 	cred.Data = json.RawMessage(decryptedData)
-	cred.IsDefault = true
 
 	return &cred, nil
 }
@@ -92,7 +88,7 @@ func (s *Storage) ListCredentials() ([]*models.Credential, error) {
 	}
 
 	rows, err := s.db.Query(`
-		SELECT id, provider, name, data, is_default, created_at, updated_at
+		SELECT id, provider, name, data, created_at, updated_at
 		FROM credentials ORDER BY created_at DESC
 	`)
 	if err != nil {
@@ -103,10 +99,9 @@ func (s *Storage) ListCredentials() ([]*models.Credential, error) {
 	var credentials []*models.Credential
 	for rows.Next() {
 		var cred models.Credential
-		var isDefault int
 		var encryptedData string
 
-		err := rows.Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &isDefault, &cred.CreatedAt, &cred.UpdatedAt)
+		err := rows.Scan(&cred.ID, &cred.Provider, &cred.Name, &encryptedData, &cred.CreatedAt, &cred.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +112,6 @@ func (s *Storage) ListCredentials() ([]*models.Credential, error) {
 		}
 
 		cred.Data = json.RawMessage(decryptedData)
-		cred.IsDefault = isDefault == 1
 		credentials = append(credentials, &cred)
 	}
 

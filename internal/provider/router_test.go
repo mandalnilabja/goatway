@@ -29,8 +29,8 @@ func (m *mockProvider) ProxyRequest(ctx context.Context, w http.ResponseWriter, 
 // mockStorage implements storage.Storage for tests.
 type mockStorage struct{}
 
-func (m *mockStorage) GetDefaultCredential(provider string) (*models.Credential, error) {
-	return &models.Credential{ID: "test-cred", Provider: provider}, nil
+func (m *mockStorage) GetCredentialByName(name string) (*models.Credential, error) {
+	return &models.Credential{ID: "test-cred", Name: name, Provider: "openrouter"}, nil
 }
 
 // Stub implementations for storage.Storage interface
@@ -39,7 +39,6 @@ func (m *mockStorage) GetCredential(id string) (*models.Credential, error) { ret
 func (m *mockStorage) ListCredentials() ([]*models.Credential, error)      { return nil, nil }
 func (m *mockStorage) UpdateCredential(cred *models.Credential) error      { return nil }
 func (m *mockStorage) DeleteCredential(id string) error                    { return nil }
-func (m *mockStorage) SetDefaultCredential(id string) error                { return nil }
 func (m *mockStorage) LogRequest(log *models.RequestLog) error             { return nil }
 func (m *mockStorage) GetRequestLogs(f models.LogFilter) ([]*models.RequestLog, error) {
 	return nil, nil

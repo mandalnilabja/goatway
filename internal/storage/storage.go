@@ -34,11 +34,10 @@ type Storage interface {
 	// Credential operations
 	CreateCredential(cred *models.Credential) error
 	GetCredential(id string) (*models.Credential, error)
-	GetDefaultCredential(provider string) (*models.Credential, error)
+	GetCredentialByName(name string) (*models.Credential, error)
 	ListCredentials() ([]*models.Credential, error)
 	UpdateCredential(cred *models.Credential) error
 	DeleteCredential(id string) error
-	SetDefaultCredential(id string) error
 
 	// Request logging operations
 	LogRequest(log *models.RequestLog) error
