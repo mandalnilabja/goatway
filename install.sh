@@ -22,6 +22,8 @@ info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1" >&2; exit 1; }
 
+cleanup() { rm -rf "${TMP_DIR}"; }
+
 # Detect OS
 detect_os() {
     case "$(uname -s)" in
@@ -77,7 +79,7 @@ main() {
 
     # Create temp directory
     TMP_DIR=$(mktemp -d)
-    trap "rm -rf ${TMP_DIR}" EXIT
+    trap cleanup EXIT
 
     # Download binary
     if ! curl -fsSL "${DOWNLOAD_URL}" -o "${TMP_DIR}/${BINARY_NAME}"; then
@@ -98,16 +100,16 @@ main() {
     fi
 
     # Verify installation
-    if command -v goatway &> /dev/null; then
+    INSTALLED_BIN="${INSTALL_DIR}/${BINARY_NAME}"
+    if "${INSTALLED_BIN}" -version &> /dev/null; then
         info "Installation successful!"
         echo ""
-        goatway -version
+        "${INSTALLED_BIN}" -version
         echo ""
         info "Run 'goatway' to start the server"
         info "Web UI will be available at http://localhost:8080"
     else
-        warn "Installed to ${INSTALL_DIR}/${BINARY_NAME}"
-        warn "Make sure ${INSTALL_DIR} is in your PATH"
+        error "Installation verification failed. Binary at ${INSTALLED_BIN} is not executable."
     fi
 }
 

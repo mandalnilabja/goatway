@@ -57,7 +57,7 @@ func (c *Credential) ToPreview() *CredentialPreview {
 // maskCredentialData masks sensitive fields in credential data based on provider type.
 func maskCredentialData(provider string, data json.RawMessage) json.RawMessage {
 	switch provider {
-	case "azure":
+	case "azure", "azurefoundry":
 		var cred AzureCredential
 		if err := json.Unmarshal(data, &cred); err == nil {
 			cred.APIKey = maskSecret(cred.APIKey)
