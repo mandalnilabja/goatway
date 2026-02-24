@@ -5,16 +5,18 @@
 Modals.updateCredentialFields = function(provider, isEdit) {
     const azureFields = document.getElementById('azure-fields');
     const apiKeyField = document.getElementById('apikey-field');
-    const isAzure = provider === 'azure';
+    const isAzureOpenAI = provider === 'azure';
+    const isAzureFoundry = provider === 'azurefoundry';
+    const showAzureFields = isAzureOpenAI || isAzureFoundry;
 
-    azureFields.style.display = isAzure ? 'block' : 'none';
+    azureFields.style.display = showAzureFields ? 'block' : 'none';
     apiKeyField.querySelector('input').placeholder = isEdit
         ? 'Leave blank to keep current'
-        : (isAzure ? 'Azure API key' : 'sk-...');
+        : (showAzureFields ? 'Azure API key' : 'sk-...');
 
     // Update required attributes
-    document.querySelector('[name="endpoint"]').required = isAzure && !isEdit;
-    document.querySelector('[name="deployment"]').required = isAzure && !isEdit;
+    document.querySelector('[name="endpoint"]').required = showAzureFields && !isEdit;
+    document.querySelector('[name="deployment"]').required = showAzureFields && !isEdit;
 };
 
 Modals.buildCredentialData = function(form, isEdit) {
@@ -24,7 +26,9 @@ Modals.buildCredentialData = function(form, isEdit) {
         provider: provider
     };
 
-    if (provider === 'azure') {
+    const isAzureOpenAI = provider === 'azure';
+    const isAzureFoundry = provider === 'azurefoundry';
+    if (isAzureOpenAI || isAzureFoundry) {
         const credData = {};
         if (form.api_key.value) credData.api_key = form.api_key.value;
         if (form.endpoint.value) credData.endpoint = form.endpoint.value;
@@ -51,7 +55,9 @@ Modals.showCredentialForm = async function(editId = null) {
         }
     }
 
-    const isAzure = credential.provider === 'azure';
+    const isAzureOpenAI = credential.provider === 'azure';
+    const isAzureFoundry = credential.provider === 'azurefoundry';
+    const showAzureFields = isAzureOpenAI || isAzureFoundry;
     this.show(`
         <div class="modal">
             <div class="modal-header">
@@ -70,17 +76,18 @@ Modals.showCredentialForm = async function(editId = null) {
                             <option value="openrouter" ${credential.provider === 'openrouter' ? 'selected' : ''}>OpenRouter</option>
                             <option value="openai" ${credential.provider === 'openai' ? 'selected' : ''}>OpenAI</option>
                             <option value="anthropic" ${credential.provider === 'anthropic' ? 'selected' : ''}>Anthropic</option>
-                            <option value="azure" ${credential.provider === 'azure' ? 'selected' : ''}>Azure OpenAI</option>
+                            <option value="azure" ${isAzureOpenAI ? 'selected' : ''}>Azure OpenAI</option>
+                            <option value="azurefoundry" ${isAzureFoundry ? 'selected' : ''}>Azure AI Foundry</option>
                         </select>
                     </div>
-                    <div id="azure-fields" style="display: ${isAzure ? 'block' : 'none'}">
+                    <div id="azure-fields" style="display: ${showAzureFields ? 'block' : 'none'}">
                         <div class="form-group">
                             <label>Endpoint</label>
-                            <input type="text" name="endpoint" ${isAzure && !editId ? 'required' : ''} placeholder="https://your-resource.openai.azure.com">
+                            <input type="text" name="endpoint" ${showAzureFields && !editId ? 'required' : ''} placeholder="https://your-resource.openai.azure.com">
                         </div>
                         <div class="form-group">
                             <label>Deployment</label>
-                            <input type="text" name="deployment" ${isAzure && !editId ? 'required' : ''} placeholder="gpt-4">
+                            <input type="text" name="deployment" ${showAzureFields && !editId ? 'required' : ''} placeholder="gpt-4">
                         </div>
                         <div class="form-group">
                             <label>API Version</label>
