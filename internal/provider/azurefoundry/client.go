@@ -3,7 +3,6 @@ package azurefoundry
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -67,8 +66,13 @@ func (p *Provider) ProxyRequest(ctx context.Context, w http.ResponseWriter, req 
 	if apiVersion == "" {
 		apiVersion = defaultAPIVersion
 	}
-	targetURL := fmt.Sprintf("https://%s/models/chat/completions?api-version=%s",
-		azureCred.Endpoint, apiVersion)
+	targetURL, err := buildTargetURL(azureCred.Endpoint, apiVersion)
+	if err != nil {
+		result.Error = err
+		result.StatusCode = http.StatusBadRequest
+		http.Error(w, "Invalid endpoint URL", http.StatusBadRequest)
+		return result, err
+	}
 
 	// Rewrite body with resolved model
 	body, err := rewriteModelInBody(opts.Body, req.Body, opts.Model)
