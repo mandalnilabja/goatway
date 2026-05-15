@@ -87,6 +87,13 @@ func EnsureConfigFile() error {
 # provider = "openrouter"
 # model = "anthropic/claude-3.5-sonnet"
 # credential_name = "my-openrouter-key"
+
+# Azure AI Foundry example
+# [[models]]
+# slug = "deepseek-r1"
+# provider = "azurefoundry"
+# model = "DeepSeek-R1"
+# credential_name = "my-azure-foundry-key"
 `
 
 	return os.WriteFile(path, []byte(defaultConfig), 0644)
